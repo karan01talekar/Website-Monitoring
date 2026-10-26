@@ -1,0 +1,4 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.content-area { padding: 1.5rem; max-width: 1440px; margin: 0 auto; }
