@@ -142,6 +142,53 @@ app.post(
     res.status(201).json(monitorPayload(monitor));
   }),
 );
+app.post(
+  "/api/reports/monitors/batch",
+  route(async (req, res) => {
+    const addresses = Array.isArray(req.body.addresses)
+      ? req.body.addresses.map((address) => String(address).trim()).filter(Boolean)
+      : [];
+    const { check_interval_minutes, notification_email } = req.body;
+    if (!addresses.length || addresses.length > 50)
+      throw new Error("Enter between 1 and 50 website addresses.");
+    if (![1, 2, 5, 15].includes(Number(check_interval_minutes)))
+      throw new Error("Choose a check interval of 1, 2, 5, or 15 minutes.");
+    if (!/^\S+@\S+\.\S+$/.test(String(notification_email || "")))
+      throw new Error("Enter a valid notification email.");
+
+    const results = await Promise.all(
+      addresses.map(async (rawAddress) => {
+        try {
+          const target = await normalizeAddress(rawAddress);
+          let monitor = await Monitor.findOneAndUpdate(
+            { addressHash: target.hash },
+            {
+              address: target.address,
+              host: target.host,
+              notificationEmail: notification_email,
+              checkIntervalMinutes: Number(check_interval_minutes),
+              isActive: true,
+            },
+            { new: true },
+          );
+          if (!monitor)
+            monitor = await Monitor.create({
+              address: target.address,
+              addressHash: target.hash,
+              host: target.host,
+              notificationEmail: notification_email,
+              checkIntervalMinutes: Number(check_interval_minutes),
+            });
+          await runMonitorCheck(monitor);
+          return { address: target.address, success: true };
+        } catch (error) {
+          return { address: rawAddress, success: false, message: error.message };
+        }
+      }),
+    );
+    res.status(201).json({ results });
+  }),
+);
 app.delete(
   "/api/reports/monitor",
   route(async (req, res) => {

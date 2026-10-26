@@ -16,6 +16,10 @@ export default function App() {
   const [report, setReport] = useState(null);
   const [monitor, setMonitor] = useState(null);
   const [monitors, setMonitors] = useState([]);
+  const [batchAddresses, setBatchAddresses] = useState("");
+  const [batchEmail, setBatchEmail] = useState("");
+  const [batchInterval, setBatchInterval] = useState(1);
+  const [batchSaving, setBatchSaving] = useState(false);
   const [email, setEmail] = useState("");
   const [interval, setIntervalValue] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -123,6 +127,32 @@ export default function App() {
       setMessage(error.response?.data?.message || "Could not stop monitoring.");
     }
   }
+  async function startBatchMonitoring() {
+    const addresses = batchAddresses.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    if (!addresses.length) return setMessage("Enter at least one website address.");
+    setBatchSaving(true);
+    setMessage("");
+    try {
+      const { data } = await api.post("/reports/monitors/batch", {
+        addresses,
+        notification_email: batchEmail,
+        check_interval_minutes: Number(batchInterval),
+      });
+      const failures = data.results.filter((result) => !result.success);
+      const successes = data.results.length - failures.length;
+      setMessage(
+        failures.length
+          ? `${successes} URL(s) started. ${failures.length} could not be added: ${failures[0].message}`
+          : `${successes} URL(s) are now being monitored.`,
+      );
+      if (!failures.length) setBatchAddresses("");
+      await loadMonitors();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Could not start monitoring the URLs.");
+    } finally {
+      setBatchSaving(false);
+    }
+  }
   const cards = report
     ? [
         {
@@ -168,6 +198,36 @@ export default function App() {
             {loading ? <FiRefreshCw className="spin" /> : <FiSearch />}{" "}
             {loading ? "Checking" : "Check website"}
           </button>
+        </div>
+      </section>
+      <section className="panel batch-panel">
+        <div className="title">
+          <div>
+            <h2>Add URLs manually</h2>
+            <p>Enter one public website address per line. The same alert email and interval apply to each URL.</p>
+          </div>
+        </div>
+        <textarea
+          value={batchAddresses}
+          onChange={(event) => setBatchAddresses(event.target.value)}
+          placeholder={"https://example.com\nhttps://another-example.com"}
+          rows="5"
+        />
+        <div className="form">
+          <label>
+            Alert email
+            <input type="email" value={batchEmail} onChange={(event) => setBatchEmail(event.target.value)} placeholder="alerts@example.com" />
+          </label>
+          <label>
+            Check every
+            <select value={batchInterval} onChange={(event) => setBatchInterval(event.target.value)}>
+              <option value="1">1 minute</option>
+              <option value="2">2 minutes</option>
+              <option value="5">5 minutes</option>
+              <option value="15">15 minutes</option>
+            </select>
+          </label>
+          <button onClick={startBatchMonitoring} disabled={batchSaving}>{batchSaving ? "Adding…" : "Start all monitors"}</button>
         </div>
       </section>
       {monitors.length > 0 && (
