@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FiActivity, FiRefreshCw, FiSearch, FiXCircle } from "react-icons/fi";
+import { FiActivity, FiXCircle } from "react-icons/fi";
 import api from "./api";
 
 const statusClass = (status) =>
@@ -120,6 +120,11 @@ export default function App() {
       });
       const failures = data.results.filter((result) => !result.success);
       const successes = data.results.length - failures.length;
+      const firstAddedAddress = data.results.find((result) => result.success)?.address;
+      if (firstAddedAddress) {
+        setAddress(firstAddedAddress);
+        await check(firstAddedAddress);
+      }
       setMessage(
         failures.length
           ? `${successes} URL(s) started. ${failures.length} could not be added: ${failures[0].message}`
@@ -164,7 +169,7 @@ export default function App() {
         </div>
         <p>Website status, SSL validity, domain expiry, and downtime alerts.</p>
       </header>
-      <section className="panel">
+      <section className="panel" style={{ display: "none" }}>
         <label>Website address</label>
         <div className="search">
           <input
@@ -182,8 +187,8 @@ export default function App() {
       <section className="panel batch-panel">
         <div className="title">
           <div>
-            <h2>Add URLs manually</h2>
-            <p>Enter one public website address per line. The same alert email and interval apply to each URL.</p>
+            <h2>Website addresses</h2>
+            <p>Enter one or more public website addresses, one per line. The same alert email and interval apply to each URL.</p>
           </div>
         </div>
         <textarea
