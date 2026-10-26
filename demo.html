@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Demo Website</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fb;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .container {
+            background: white;
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px #00000015;
+        }
+
+        h1 {
+            color: #2563eb;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Welcome to My Website!</h1>
+
+        <p>This is my first HTML demo page.</p>
+
+        <input type="text" id="username" placeholder="Enter your name">
+
+        <br><br>
+
+        <button onclick="showMessage()">Click Me</button>
+
+        <h3 id="message"></h3>
+    </div>
+
+    <script>
+        function showMessage() {
+            const name = document.getElementById("username").value;
+
+            if (name.trim() === "") {
+                document.getElementById("message").textContent =
+                    "Please enter your name!";
+            } else {
+                document.getElementById("message").textContent =
+                    "Hello, " + name + "! Welcome!";
+            }
+        }
+    </script>
+</body>
+
+</html>
