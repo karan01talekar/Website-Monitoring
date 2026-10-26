@@ -58,9 +58,7 @@ app.get(
 app.get(
   "/api/reports/data",
   route(async (req, res) => {
-    const target = await normalizeAddress(
-      req.query.address || process.env.WEBSITE_URL,
-    );
+    const target = await normalizeAddress(req.query.address);
     const isLocalTarget =
       target.host === "localhost" ||
       target.host.endsWith(".localhost") ||
@@ -93,9 +91,7 @@ app.get(
 app.get(
   "/api/reports/monitor",
   route(async (req, res) => {
-    const target = await normalizeAddress(
-      req.query.address || process.env.WEBSITE_URL,
-    );
+    const target = await normalizeAddress(req.query.address);
     const monitor = await Monitor.findOne({ addressHash: target.hash });
     if (
       monitor?.isActive &&
@@ -116,9 +112,7 @@ app.post(
       throw new Error("Choose a check interval of 1, 2, 5, or 15 minutes.");
     if (!/^\S+@\S+\.\S+$/.test(String(notification_email || "")))
       throw new Error("Enter a valid notification email.");
-    const target = await normalizeAddress(
-      req.body.address || process.env.WEBSITE_URL,
-    );
+    const target = await normalizeAddress(req.body.address);
     let monitor = await Monitor.findOneAndUpdate(
       { addressHash: target.hash },
       {

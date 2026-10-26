@@ -192,7 +192,7 @@ export default function App() {
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             onKeyDown={(event) => event.key === "Enter" && check()}
-            placeholder="https://example.com"
+            placeholder="Enter a public website URL"
           />
           <button onClick={() => check()} disabled={loading}>
             {loading ? <FiRefreshCw className="spin" /> : <FiSearch />}{" "}
@@ -210,7 +210,7 @@ export default function App() {
         <textarea
           value={batchAddresses}
           onChange={(event) => setBatchAddresses(event.target.value)}
-          placeholder={"https://example.com\nhttps://another-example.com"}
+          placeholder="Enter one public website URL per line"
           rows="5"
         />
         <div className="form">
