@@ -6,16 +6,11 @@ const statusClass = (status) =>
   `badge ${["up", "valid"].includes(status) ? "good" : ["down", "expired", "invalid"].includes(status) ? "bad" : "neutral"}`;
 const formatDate = (value) =>
   value ? new Date(value).toLocaleString() : "Not available";
-const duration = (value) => {
-  const seconds = Math.max(0, Math.floor(value || 0));
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m ${seconds % 60}s`;
-};
 
 export default function App() {
   const [address, setAddress] = useState("");
   const [report, setReport] = useState(null);
   const [monitor, setMonitor] = useState(null);
-  const [monitors, setMonitors] = useState([]);
   const [batchAddresses, setBatchAddresses] = useState("");
   const [batchEmail, setBatchEmail] = useState("");
   const [batchInterval, setBatchInterval] = useState(1);
@@ -57,14 +52,6 @@ export default function App() {
       setMonitor(null);
     }
   }, []);
-  const loadMonitors = useCallback(async () => {
-    try {
-      const { data } = await api.get("/reports/monitors");
-      setMonitors(data);
-    } catch {
-      setMonitors([]);
-    }
-  }, []);
   const check = useCallback(
     async (target = address) => {
       if (!target.trim()) return setMessage("Enter a website address.");
@@ -87,14 +74,9 @@ export default function App() {
     [address, getMonitor],
   );
   useEffect(() => {
-    loadMonitors();
-    const refresh = () => {
-      getMonitor(address);
-      loadMonitors();
-    };
-    const timer = window.setInterval(refresh, 10000);
+    const timer = window.setInterval(() => getMonitor(address), 10000);
     return () => window.clearInterval(timer);
-  }, [address, getMonitor, loadMonitors]);
+  }, [address, getMonitor]);
   async function startMonitoring() {
     setSaving(true);
     setMessage("");
@@ -105,7 +87,6 @@ export default function App() {
         check_interval_minutes: Number(interval),
       });
       setMonitor(data.monitor);
-      await loadMonitors();
       setMessage("Monitoring is active.");
     } catch (error) {
       setMessage(
@@ -121,8 +102,7 @@ export default function App() {
       setMonitor((current) =>
         current ? { ...current, is_active: false } : current,
       );
-      await loadMonitors();
-      setMessage("Monitoring stopped. History was retained.");
+      setMessage("Monitoring stopped.");
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not stop monitoring.");
     }
@@ -146,7 +126,6 @@ export default function App() {
           : `${successes} URL(s) are now being monitored.`,
       );
       if (!failures.length) setBatchAddresses("");
-      await loadMonitors();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not start monitoring the URLs.");
     } finally {
@@ -230,36 +209,6 @@ export default function App() {
           <button onClick={startBatchMonitoring} disabled={batchSaving}>{batchSaving ? "Adding…" : "Start all monitors"}</button>
         </div>
       </section>
-      {monitors.length > 0 && (
-        <section className="panel monitor-list">
-          <div className="title">
-            <div>
-              <h2>Active monitors</h2>
-              <p>Select a website to view its detailed report and history.</p>
-            </div>
-            <span className="badge neutral">{monitors.length}</span>
-          </div>
-          <div className="monitor-grid">
-            {monitors.map((savedMonitor) => (
-              <button
-                type="button"
-                className="monitor-item"
-                key={savedMonitor.address}
-                onClick={() => {
-                  setAddress(savedMonitor.address);
-                  check(savedMonitor.address);
-                }}
-              >
-                <span className="monitor-address">{savedMonitor.address}</span>
-                <span className={statusClass(savedMonitor.status || "unknown")}>
-                  {savedMonitor.status || "pending"}
-                </span>
-                <small>Last checked: {formatDate(savedMonitor.last_checked_at)}</small>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
       {message && <p className="message">{message}</p>}
       {report && (
         <>
@@ -325,48 +274,6 @@ export default function App() {
                 </button>
               )}
             </div>
-            {monitor && (
-              <div className="history">
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {monitor.status || "Waiting for first check"} ·{" "}
-                  <strong>Last checked:</strong>{" "}
-                  {formatDate(monitor.last_checked_at)} ·{" "}
-                  <strong>Downtime events:</strong> {monitor.downtime_count}
-                </p>
-                <h3>Downtime history</h3>
-                {monitor.downtime_records?.length ? (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Down since</th>
-                        <th>Recovered</th>
-                        <th>Duration</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monitor.downtime_records.map((record, index) => (
-                        <tr key={index}>
-                          <td>{formatDate(record.started_at)}</td>
-                          <td>
-                            {record.recovered_at
-                              ? formatDate(record.recovered_at)
-                              : "Ongoing"}
-                          </td>
-                          <td>
-                            {record.ongoing
-                              ? "Ongoing"
-                              : duration(record.duration_seconds)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p>No downtime has been recorded.</p>
-                )}
-              </div>
-            )}
           </section>
         </>
       )}

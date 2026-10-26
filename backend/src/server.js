@@ -41,21 +41,6 @@ const route = (handler) => (req, res) =>
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 app.get(
-  "/api/reports/monitors",
-  route(async (_req, res) => {
-    const monitors = await Monitor.find({ isActive: true }).sort({ updatedAt: -1 });
-    res.json(
-      monitors.map((monitor) => ({
-        address: monitor.address,
-        status: monitor.currentStatus,
-        check_interval_minutes: monitor.checkIntervalMinutes,
-        last_checked_at: monitor.lastCheckedAt,
-        downtime_count: monitor.downtimeCount,
-      })),
-    );
-  }),
-);
-app.get(
   "/api/reports/data",
   route(async (req, res) => {
     const target = await normalizeAddress(req.query.address);
@@ -189,7 +174,7 @@ app.delete(
     const target = await normalizeAddress(req.body.address);
     await Monitor.updateOne({ addressHash: target.hash }, { isActive: false });
     res.json({
-      message: "Monitoring stopped. Website and history were retained.",
+      message: "Monitoring stopped.",
     });
   }),
 );
