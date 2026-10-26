@@ -11,6 +11,7 @@ export default function App() {
   const [address, setAddress] = useState("");
   const [report, setReport] = useState(null);
   const [monitor, setMonitor] = useState(null);
+  const [monitors, setMonitors] = useState([]);
   const [batchAddresses, setBatchAddresses] = useState("");
   const [batchEmail, setBatchEmail] = useState("");
   const [batchInterval, setBatchInterval] = useState(1);
@@ -52,6 +53,14 @@ export default function App() {
       setMonitor(null);
     }
   }, []);
+  const loadMonitors = useCallback(async () => {
+    try {
+      const { data } = await api.get("/reports/monitors");
+      setMonitors(data);
+    } catch {
+      setMonitors([]);
+    }
+  }, []);
   const check = useCallback(
     async (target = address) => {
       if (!target.trim()) return setMessage("Enter a website address.");
@@ -74,9 +83,13 @@ export default function App() {
     [address, getMonitor],
   );
   useEffect(() => {
-    const timer = window.setInterval(() => getMonitor(address), 10000);
+    loadMonitors();
+    const timer = window.setInterval(() => {
+      getMonitor(address);
+      loadMonitors();
+    }, 10000);
     return () => window.clearInterval(timer);
-  }, [address, getMonitor]);
+  }, [address, getMonitor, loadMonitors]);
   async function startMonitoring() {
     setSaving(true);
     setMessage("");
@@ -87,6 +100,7 @@ export default function App() {
         check_interval_minutes: Number(interval),
       });
       setMonitor(data.monitor);
+      await loadMonitors();
       setMessage("Monitoring is active.");
     } catch (error) {
       setMessage(
@@ -102,6 +116,7 @@ export default function App() {
       setMonitor((current) =>
         current ? { ...current, is_active: false } : current,
       );
+      await loadMonitors();
       setMessage("Monitoring stopped.");
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not stop monitoring.");
@@ -130,7 +145,7 @@ export default function App() {
           ? `${successes} URL(s) started. ${failures.length} could not be added: ${failures[0].message}`
           : `${successes} URL(s) are now being monitored.`,
       );
-      if (!failures.length) setBatchAddresses("");
+      await loadMonitors();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not start monitoring the URLs.");
     } finally {
@@ -214,6 +229,45 @@ export default function App() {
           <button onClick={startBatchMonitoring} disabled={batchSaving}>{batchSaving ? "Adding…" : "Start all monitors"}</button>
         </div>
       </section>
+      {monitors.length > 0 && (
+        <section className="panel">
+          <div className="title">
+            <div>
+              <h2>Monitored websites</h2>
+              <p>Select a website to open its live report.</p>
+            </div>
+          </div>
+          <div className="cards">
+            {monitors.map((savedMonitor) => (
+              <button
+                type="button"
+                key={savedMonitor.address}
+                onClick={() => {
+                  setAddress(savedMonitor.address);
+                  check(savedMonitor.address);
+                }}
+                style={{
+                  display: "block",
+                  textAlign: "left",
+                  background: "#f8faff",
+                  color: "#344054",
+                  border: "1px solid #dbe5ff",
+                }}
+              >
+                <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {savedMonitor.address}
+                </span>
+                <span className={statusClass(savedMonitor.status || "unknown")} style={{ display: "inline-block", marginTop: "10px" }}>
+                  {savedMonitor.status || "pending"}
+                </span>
+                <small style={{ display: "block", marginTop: "10px", color: "#667085" }}>
+                  Last checked: {formatDate(savedMonitor.last_checked_at)}
+                </small>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {message && <p className="message">{message}</p>}
       {report && (
         <>
