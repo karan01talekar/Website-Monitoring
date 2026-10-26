@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FiActivity, FiXCircle } from "react-icons/fi";
+import { FiActivity, FiRefreshCw, FiSearch, FiXCircle } from "react-icons/fi";
 import api from "./api";
 
 const statusClass = (status) =>
