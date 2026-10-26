@@ -15,6 +15,7 @@ export default function App() {
   const [address, setAddress] = useState("");
   const [report, setReport] = useState(null);
   const [monitor, setMonitor] = useState(null);
+  const [monitors, setMonitors] = useState([]);
   const [email, setEmail] = useState("");
   const [interval, setIntervalValue] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,14 @@ export default function App() {
       setMonitor(null);
     }
   }, []);
+  const loadMonitors = useCallback(async () => {
+    try {
+      const { data } = await api.get("/reports/monitors");
+      setMonitors(data);
+    } catch {
+      setMonitors([]);
+    }
+  }, []);
   const check = useCallback(
     async (target = address) => {
       if (!target.trim()) return setMessage("Enter a website address.");
@@ -74,9 +83,14 @@ export default function App() {
     [address, getMonitor],
   );
   useEffect(() => {
-    const timer = window.setInterval(() => getMonitor(address), 10000);
+    loadMonitors();
+    const refresh = () => {
+      getMonitor(address);
+      loadMonitors();
+    };
+    const timer = window.setInterval(refresh, 10000);
     return () => window.clearInterval(timer);
-  }, [address, getMonitor]);
+  }, [address, getMonitor, loadMonitors]);
   async function startMonitoring() {
     setSaving(true);
     setMessage("");
@@ -87,6 +101,7 @@ export default function App() {
         check_interval_minutes: Number(interval),
       });
       setMonitor(data.monitor);
+      await loadMonitors();
       setMessage("Monitoring is active.");
     } catch (error) {
       setMessage(
@@ -102,6 +117,7 @@ export default function App() {
       setMonitor((current) =>
         current ? { ...current, is_active: false } : current,
       );
+      await loadMonitors();
       setMessage("Monitoring stopped. History was retained.");
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not stop monitoring.");
@@ -154,6 +170,36 @@ export default function App() {
           </button>
         </div>
       </section>
+      {monitors.length > 0 && (
+        <section className="panel monitor-list">
+          <div className="title">
+            <div>
+              <h2>Active monitors</h2>
+              <p>Select a website to view its detailed report and history.</p>
+            </div>
+            <span className="badge neutral">{monitors.length}</span>
+          </div>
+          <div className="monitor-grid">
+            {monitors.map((savedMonitor) => (
+              <button
+                type="button"
+                className="monitor-item"
+                key={savedMonitor.address}
+                onClick={() => {
+                  setAddress(savedMonitor.address);
+                  check(savedMonitor.address);
+                }}
+              >
+                <span className="monitor-address">{savedMonitor.address}</span>
+                <span className={statusClass(savedMonitor.status || "unknown")}>
+                  {savedMonitor.status || "pending"}
+                </span>
+                <small>Last checked: {formatDate(savedMonitor.last_checked_at)}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {message && <p className="message">{message}</p>}
       {report && (
         <>

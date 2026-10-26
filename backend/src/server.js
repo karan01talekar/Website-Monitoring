@@ -17,7 +17,22 @@ import {
 } from "./services/monitorService.js";
 
 const app = express();
-app.use(cors({ origin: process.env.CLIENT_ORIGIN?.split(",") || true }));
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+app.use(
+  cors({
+    origin(origin, callback) {
+      const normalizedOrigin = origin?.replace(/\/+$/, "");
+      const isAllowed =
+        !normalizedOrigin ||
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes(normalizedOrigin);
+      callback(null, isAllowed);
+    },
+  }),
+);
 app.use(express.json());
 const route = (handler) => (req, res) =>
   Promise.resolve(handler(req, res)).catch((error) =>
@@ -25,6 +40,21 @@ const route = (handler) => (req, res) =>
   );
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get(
+  "/api/reports/monitors",
+  route(async (_req, res) => {
+    const monitors = await Monitor.find({ isActive: true }).sort({ updatedAt: -1 });
+    res.json(
+      monitors.map((monitor) => ({
+        address: monitor.address,
+        status: monitor.currentStatus,
+        check_interval_minutes: monitor.checkIntervalMinutes,
+        last_checked_at: monitor.lastCheckedAt,
+        downtime_count: monitor.downtimeCount,
+      })),
+    );
+  }),
+);
 app.get(
   "/api/reports/data",
   route(async (req, res) => {
@@ -132,5 +162,7 @@ cron.schedule("* * * * *", () =>
   ),
 );
 app.listen(Number(process.env.PORT || 4000), () =>
-  console.log(`API listening on ${process.env.PORT || 4000}`),
+  console.log(
+    `API listening on ${process.env.PORT || 4000}; allowed origins: ${allowedOrigins.join(", ") || "any"}`,
+  ),
 );
