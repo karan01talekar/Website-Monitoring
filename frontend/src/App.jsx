@@ -143,12 +143,14 @@ export default function App() {
       const searched = new Set(searchedAddresses);
       data.results.filter((result) => result.success).forEach((result) => searched.add(result.address));
       const nextSearchedAddresses = [...searched];
-      setSearchedAddresses(nextSearchedAddresses);
       const firstAddedAddress = data.results.find((result) => result.success)?.address;
       if (firstAddedAddress) {
         setAddress(firstAddedAddress);
         await check(firstAddedAddress);
       }
+      // check() records its target too; restore the complete successful batch
+      // after it so its first-URL update does not hide the other batch URLs.
+      setSearchedAddresses(nextSearchedAddresses);
       setMessage(
         failures.length
           ? `${successes} URL(s) started. ${failures.length} could not be added: ${failures[0].message}`
