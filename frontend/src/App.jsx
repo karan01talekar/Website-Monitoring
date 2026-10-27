@@ -1140,11 +1140,13 @@ function Dashboard({ user, onSignOut }) {
                     </div>
                   )}
                   {report && (
-                    <MonitorReport
-                      report={report}
-                      address={address}
-                      reportCards={reportCards}
-                    />
+                    <div className="report-scroll-target" ref={reportRef}>
+                      <MonitorReport
+                        report={report}
+                        address={address}
+                        reportCards={reportCards}
+                      />
+                    </div>
                   )}
                 </>
               )}
@@ -1537,13 +1539,11 @@ function Dashboard({ user, onSignOut }) {
                     </div>
                   )}
                   {report && bulkMonitorAddresses.includes(address) && (
-                    <div className="report-scroll-target" ref={reportRef}>
-                      <MonitorReport
-                        report={report}
-                        address={address}
-                        reportCards={reportCards}
-                      />
-                    </div>
+                    <MonitorReport
+                      report={report}
+                      address={address}
+                      reportCards={reportCards}
+                    />
                   )}
                 </div>
               )}
