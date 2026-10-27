@@ -14,7 +14,6 @@ import {
   FiPlus,
   FiRefreshCw,
   FiSearch,
-  FiSettings,
   FiShield,
   FiX,
   FiLock,
@@ -386,9 +385,22 @@ function Dashboard({ user, onSignOut }) {
   const [batchSaving, setBatchSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
-  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [page, setPage] = useState("overview");
   const [lastUpdated, setLastUpdated] = useState(null);
+
+  const pageTitles = {
+    overview: "Overview",
+    monitors: "Monitors",
+    incidents: "Incidents",
+    bulk: "Check multiple websites",
+  };
+
+  function selectPage(nextPage) {
+    setPage(nextPage);
+    setMobileNavOpen(false);
+  }
 
   const loadMonitors = useCallback(async () => {
     try {
@@ -650,24 +662,24 @@ function Dashboard({ user, onSignOut }) {
         <p className="nav-label">MONITORING</p>
         <nav className="navigation">
           <a
-            className="nav-item active"
+            className={`nav-item ${page === "overview" ? "active" : ""}`}
             href="#overview"
-            onClick={() => setMobileNavOpen(false)}
+            onClick={(event) => { event.preventDefault(); selectPage("overview"); }}
           >
             <FiLayout /> Overview
           </a>
           <a
-            className="nav-item"
+            className={`nav-item ${page === "monitors" ? "active" : ""}`}
             href="#monitors"
-            onClick={() => setMobileNavOpen(false)}
+            onClick={(event) => { event.preventDefault(); selectPage("monitors"); }}
           >
             <FiGlobe /> Monitors{" "}
             <span className="nav-count">{monitors.length}</span>
           </a>
           <a
-            className="nav-item"
+            className={`nav-item ${page === "incidents" ? "active" : ""}`}
             href="#incidents"
-            onClick={() => setMobileNavOpen(false)}
+            onClick={(event) => { event.preventDefault(); selectPage("incidents"); }}
           >
             <FiAlertCircle /> Incidents{" "}
             {downCount > 0 && (
@@ -675,18 +687,11 @@ function Dashboard({ user, onSignOut }) {
             )}
           </a>
           <a
-            className="nav-item"
-            href="#checks"
-            onClick={() => setMobileNavOpen(false)}
+            className={`nav-item ${page === "bulk" ? "active" : ""}`}
+            href="#bulk-check"
+            onClick={(event) => { event.preventDefault(); selectPage("bulk"); }}
           >
-            <FiShield /> Website checks
-          </a>
-          <a
-            className="nav-item"
-            href="#settings"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <FiSettings /> Settings
+            <FiShield /> Check multiple websites
           </a>
         </nav>
         <div className="sidebar-bottom">
@@ -753,13 +758,13 @@ function Dashboard({ user, onSignOut }) {
                 Sign in
               </a>
             )}
-            <a className="button button-primary top-add" href="#checks">
+            <a className="button button-primary top-add" href="#monitors" onClick={(event) => { event.preventDefault(); selectPage("monitors"); }}>
               <FiPlus /> Add monitor
             </a>
           </div>
         </header>
 
-        <div className="page-wrap">
+        <div className={`page-wrap page-view page-view-${page}`}>
           <section className="page-heading">
             <div>
               <div className="eyebrow">
@@ -772,8 +777,8 @@ function Dashboard({ user, onSignOut }) {
                   })
                   .toUpperCase()}
               </div>
-              <h1>Overview</h1>
-              <p>Here’s the health of your websites and services.</p>
+              <h1>{pageTitles[page]}</h1>
+              <p>{page === "overview" ? "Here’s the health of your websites and services." : page === "monitors" ? "Manage and review all monitored websites." : page === "incidents" ? "Review websites that are currently unavailable." : "Run availability, SSL and domain checks for multiple websites."}</p>
             </div>
             <div className="last-updated">
               {lastUpdated
@@ -798,7 +803,7 @@ function Dashboard({ user, onSignOut }) {
             </div>
           )}
 
-          <section className="metric-grid" aria-label="Monitoring summary">
+          {page === "overview" && <section className="metric-grid" aria-label="Monitoring summary">
             <article className="metric-card">
               <div className="metric-top">
                 <span>Total monitors</span>
@@ -853,9 +858,15 @@ function Dashboard({ user, onSignOut }) {
               </strong>
               <small>Monitor status updates automatically</small>
             </article>
-          </section>
+          </section>}
 
-          <section className="content-grid">
+          {(page === "monitors" || page === "incidents") && <section className="content-grid single-page-grid">
+            {page === "monitors" && <>
+            <div className="monitor-summary surface">
+              <span className="summary-icon"><FiGlobe /></span>
+              <div><strong>{monitors.length} websites monitored</strong><small>Checks run automatically every 30 seconds</small></div>
+              <span className="summary-status"><i /> {activeCount} active</span>
+            </div>
             <article className="surface monitor-surface" id="monitors">
               <div className="surface-heading">
                 <div>
@@ -868,7 +879,7 @@ function Dashboard({ user, onSignOut }) {
                     setAddress("");
                     setReport(null);
                     setMonitor(null);
-                    document.getElementById("website-address")?.focus();
+                    selectPage("overview");
                   }}
                 >
                   <FiPlus /> Add monitor
@@ -951,13 +962,20 @@ function Dashboard({ user, onSignOut }) {
                       ? "Add a website to begin tracking availability and health."
                       : "Connecting to the monitoring service…"}
                   </p>
-                  <a className="button button-primary" href="#checks">
+                  <a className="button button-primary" href="#checks" onClick={(event) => { event.preventDefault(); selectPage("overview"); }}>
                     <FiPlus /> Add your first monitor
                   </a>
                 </div>
               )}
             </article>
+            </>}
 
+            {page === "incidents" && <>
+            <div className={`incident-summary ${downCount ? "has-incidents" : "all-clear"}`}>
+              <span className="incident-summary-icon">{downCount ? <FiAlertCircle /> : <FiCheckCircle />}</span>
+              <div><strong>{downCount ? `${downCount} website${downCount === 1 ? "" : "s"} need attention` : "All monitored websites are operational"}</strong><small>{downCount ? "Review the active incidents below." : "We’ll show new incidents here as soon as a monitor reports a problem."}</small></div>
+              <span className="incident-summary-count">{downCount}</span>
+            </div>
             <article className="surface incident-surface" id="incidents">
               <div className="surface-heading">
                 <div>
@@ -1001,9 +1019,10 @@ function Dashboard({ user, onSignOut }) {
                 <span>{downCount} active</span>
               </div>
             </article>
-          </section>
+            </>}
+          </section>}
 
-          <section className="surface check-surface" id="checks">
+          {page === "overview" && <section className="surface check-surface" id="checks">
             <div className="surface-heading">
               <div>
                 <h2>Check a website</h2>
@@ -1151,9 +1170,13 @@ function Dashboard({ user, onSignOut }) {
                 </div>
               </div>
             )}
-          </section>
+          </section>}
 
-          <section className="surface batch-surface" id="settings">
+          {page === "bulk" && <section className="surface batch-surface" id="bulk-check">
+            <div className="bulk-intro">
+              <span className="bulk-intro-icon"><FiShield /></span>
+              <div><span className="eyebrow">BULK MONITORING</span><h2>Check and monitor a list of websites</h2><p>Paste one URL per line. We’ll add each site to your monitoring workspace.</p></div>
+            </div>
             <button
               className="batch-toggle"
               onClick={() => setBatchOpen((value) => !value)}
@@ -1214,7 +1237,7 @@ function Dashboard({ user, onSignOut }) {
                 </button>
               </form>
             )}
-          </section>
+          </section>}
 
           <footer className="page-footer">
             <span>
