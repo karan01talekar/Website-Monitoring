@@ -748,6 +748,16 @@ function Dashboard({ user, onSignOut }) {
             <FiLayout /> Overview
           </a>
           <a
+            className={`nav-item ${page === "bulk" ? "active" : ""}`}
+            href="#bulk-check"
+            onClick={(event) => {
+              event.preventDefault();
+              selectPage("bulk");
+            }}
+          >
+            <FiShield /> Check multiple websites
+          </a>
+          <a
             className={`nav-item ${page === "monitors" ? "active" : ""}`}
             href="#monitors"
             onClick={(event) => {
@@ -770,16 +780,6 @@ function Dashboard({ user, onSignOut }) {
             {downCount > 0 && (
               <span className="nav-count warning-count">{downCount}</span>
             )}
-          </a>
-          <a
-            className={`nav-item ${page === "bulk" ? "active" : ""}`}
-            href="#bulk-check"
-            onClick={(event) => {
-              event.preventDefault();
-              selectPage("bulk");
-            }}
-          >
-            <FiShield /> Check multiple websites
           </a>
         </nav>
         <div className="sidebar-bottom">
