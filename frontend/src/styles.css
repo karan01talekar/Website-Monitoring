@@ -91,3 +91,29 @@
   .metric-icon { width: 23px; height: 23px; }
   .report-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Keep narrow viewports inside the device width, including long URLs and tables. */
+@media (max-width: 760px) {
+  html, body, #root, .app-shell { width: 100%; max-width: 100%; }
+  html, body { overflow-x: hidden; }
+  .main-content { width: 100%; max-width: 100%; margin-left: 0; }
+  .page-wrap { width: 100%; max-width: 100%; }
+  .sidebar { height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .table-wrap { width: 100%; max-width: 100%; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+  .table-wrap table { min-width: 620px; }
+  .surface, .surface-heading, .report-card, .settings-heading, .page-footer { max-width: 100%; }
+  .notice p, .page-heading p, .surface-heading p, .report-card p { overflow-wrap: anywhere; }
+  .settings-form input, .settings-form select, .batch-form input, .batch-form select, .batch-form textarea { min-width: 0; }
+  .auth-layout, .auth-main { width: 100%; max-width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .page-heading { flex-direction: column; }
+  .last-updated { max-width: none; padding: 0; text-align: left; }
+  .metric-top { align-items: flex-start; }
+  .health-footer { gap: 8px; flex-wrap: wrap; }
+  .report-title { flex-wrap: wrap; }
+  .settings-heading { align-items: flex-start; flex-wrap: wrap; }
+  .settings-actions { width: 100%; }
+  .settings-actions .button { min-width: 0; }
+}
