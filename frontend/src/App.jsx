@@ -8,6 +8,14 @@ import {
 import api from "./api";
 
 const statusClass = (status) => `status-pill ${["up", "valid"].includes(status) ? "is-good" : ["down", "expired", "invalid"].includes(status) ? "is-bad" : "is-neutral"}`;
+const availabilityLabel = (result) => result?.http_status === 403 ? "Access blocked" : result?.http_status === 401 ? "Login required" : result?.http_status === 429 ? "Rate limited" : result?.status || "Unknown";
+const availabilityClass = (result) => [401, 403, 429].includes(result?.http_status) ? "status-pill is-blocked" : statusClass(result?.status);
+const availabilityMessage = (result) => {
+  if (result?.http_status === 403) return "The server responded with HTTP 403 Forbidden. It is reachable, but refused the monitoring service’s request.";
+  if (result?.http_status === 401) return "The server responded with HTTP 401 Unauthorized. It requires authentication for this URL.";
+  if (result?.http_status === 429) return "The server responded with HTTP 429 Too Many Requests. It is limiting monitoring requests.";
+  return `${result?.message || ""}${result?.http_status ? ` (HTTP ${result.http_status})` : ""}`;
+};
 const formatDate = (value) => value ? new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Not available";
 const relativeDate = (value) => {
   if (!value) return "Not checked yet";
@@ -126,9 +134,9 @@ function Dashboard({ user, onSignOut }) {
   const [monitor, setMonitor] = useState(null);
   const [monitors, setMonitors] = useState([]);
   const [batchAddresses, setBatchAddresses] = useState("");
-  const [batchEmail, setBatchEmail] = useState("");
+  const [batchEmail, setBatchEmail] = useState(user?.email || "");
   const [batchInterval, setBatchInterval] = useState(1);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
   const [interval, setIntervalValue] = useState(1);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -156,14 +164,14 @@ function Dashboard({ user, onSignOut }) {
       const { data } = await api.get("/reports/monitor", { params: { address: target } });
       setMonitor(data.monitor || null);
       if (data.monitor) {
-        setEmail(data.monitor.notification_email || "");
+        setEmail(user?.email || data.monitor.notification_email || "");
         setIntervalValue(data.monitor.check_interval_minutes || 1);
         if (data.monitor.status) {
-          setReport((current) => current ? { ...current, uptime: { ...current.uptime, status: data.monitor.status, message: data.monitor.status === "down" ? "Scheduled checks report this site as unavailable." : `Monitored website is up. Last checked ${formatDate(data.monitor.last_checked_at)}.` } } : current);
+          setReport((current) => current ? { ...current, uptime: { ...current.uptime, status: data.monitor.status, message: current.uptime?.http_status === 403 ? availabilityMessage(current.uptime) : data.monitor.status === "down" ? "Scheduled checks report this site as unavailable." : `Monitored website is up. Last checked ${formatDate(data.monitor.last_checked_at)}.` } } : current);
         }
       }
     } catch { setMonitor(null); }
-  }, []);
+  }, [user?.email]);
 
   const check = useCallback(async (target = address) => {
     const value = target.trim();
@@ -233,12 +241,13 @@ function Dashboard({ user, onSignOut }) {
   }
 
   const activeCount = monitors.filter((item) => item.is_active !== false).length;
-  const downCount = monitors.filter((item) => item.status === "down").length;
+  const downMonitors = monitors.filter((item) => item.status === "down");
+  const downCount = downMonitors.length;
   const operationalPercent = monitors.length ? Math.round((monitors.filter((item) => item.status === "up").length / monitors.length) * 100) : null;
   const reportCards = useMemo(() => report ? [
     { name: "Domain expiry", icon: FiClock, result: report.domain_expiry, body: report.domain_expiry?.expires_at ? `${formatDate(report.domain_expiry.expires_at)} · ${report.domain_expiry.days_remaining} days remaining` : report.domain_expiry?.message },
     { name: "SSL certificate", icon: FiShield, result: report.ssl, body: report.ssl?.expires_at ? `Expires ${formatDate(report.ssl.expires_at)} · ${report.ssl.days_remaining} days remaining${report.ssl.issuer ? ` · ${report.ssl.issuer}` : ""}` : report.ssl?.message },
-    { name: "Live availability", icon: FiActivity, result: report.uptime, body: `${report.uptime?.message || ""}${report.uptime?.http_status ? ` (HTTP ${report.uptime.http_status})` : ""}` },
+    { name: "Live availability", icon: FiActivity, result: report.uptime, body: availabilityMessage(report.uptime) },
   ] : [], [report]);
 
   return (
@@ -284,16 +293,16 @@ function Dashboard({ user, onSignOut }) {
             </article>
 
             <article className="surface incident-surface" id="incidents">
-              <div className="surface-heading"><div><h2>Service health</h2><p>Live status from your monitored websites</p></div><span className="health-live"><i /> Live</span></div>
-              {monitors.length ? <div className="health-list">{monitors.slice(0, 6).map((item) => <div className="health-row" key={item.address}><span className={`health-indicator ${item.status === "up" ? "health-up" : item.status === "down" ? "health-down" : "health-unknown"}`} /> <span className="health-name">{item.address.replace(/^https?:\/\//, "")}</span><span className={statusClass(item.status || "unknown")}>{item.status || "Pending"}</span></div>)}</div> : <div className="health-empty"><FiActivity /><span>Your service status will appear here when you add a monitor.</span></div>}
-              <div className="health-footer"><span><span className="live-dot" /> Polling every 30 seconds</span><span>{monitors.length} tracked</span></div>
+              <div className="surface-heading"><div><h2>Incidents</h2><p>Only websites currently reporting down</p></div><span className={downCount ? "health-live health-down-label" : "health-live"}><i /> {downCount} down</span></div>
+              {downMonitors.length ? <div className="health-list">{downMonitors.map((item) => <div className="health-row" key={item.address}><span className="health-indicator health-down" /> <span className="health-name">{item.address.replace(/^https?:\/\//, "")}</span><span className={statusClass("down")}>Down</span></div>)}</div> : <div className="health-empty"><FiCheckCircle /><span>{monitors.length ? "No active incidents. None of your websites are reporting down." : "Your incidents will appear here when you add monitors."}</span></div>}
+              <div className="health-footer"><span><span className="live-dot" /> Polling every 30 seconds</span><span>{downCount} active</span></div>
             </article>
           </section>
 
           <section className="surface check-surface" id="checks">
             <div className="surface-heading"><div><h2>Check a website</h2><p>Run an on-demand availability, SSL and domain expiry check.</p></div><span className="check-heading-icon"><FiSearch /></span></div>
             <form className="check-form" onSubmit={(event) => { event.preventDefault(); check(); }}><label className="sr-only" htmlFor="website-address">Website URL</label><div className="url-input-wrap"><FiGlobe /><input id="website-address" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="https://example.com" type="url" /></div><button className="button button-primary" type="submit" disabled={loading}>{loading ? <><FiRefreshCw className="spin" /> Checking…</> : <><FiSearch /> Check website</>}</button></form>
-            {report && <div className="report-area"><div className="report-title"><div><span className="eyebrow">LATEST CHECK</span><h3>{report.domain || address}</h3></div><span className={statusClass(report.uptime?.status || "unknown")}><i />{report.uptime?.status || "Checked"}</span></div><div className="report-grid">{reportCards.map(({ name, icon: Icon, result, body }) => <article className="report-card" key={name}><div className="report-card-head"><span className="report-icon"><Icon /></span><span className={statusClass(result?.status || "unknown")}><i />{result?.status || "Unknown"}</span></div><h4>{name}</h4><p>{body || "Information unavailable"}</p></article>)}</div>
+            {report && <div className="report-area"><div className="report-title"><div><span className="eyebrow">LATEST CHECK</span><h3>{report.domain || address}</h3></div><span className={availabilityClass(report.uptime)}><i />{availabilityLabel(report.uptime)}</span></div><div className="report-grid">{reportCards.map(({ name, icon: Icon, result, body }) => <article className="report-card" key={name}><div className="report-card-head"><span className="report-icon"><Icon /></span><span className={name === "Live availability" ? availabilityClass(result) : statusClass(result?.status || "unknown")}><i />{name === "Live availability" ? availabilityLabel(result) : result?.status || "Unknown"}</span></div><h4>{name}</h4><p>{body || "Information unavailable"}</p></article>)}</div>
               <div className="monitor-settings"><div className="settings-heading"><div><h3>Uptime monitoring</h3><p>Get notified when this website becomes unavailable.</p></div>{monitor?.is_active && <span className="status-pill is-good"><i /> Monitoring active</span>}</div><form className="settings-form" onSubmit={startMonitoring}><label>Alert email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="alerts@example.com" /></label><label>Check interval<select value={interval} onChange={(event) => setIntervalValue(event.target.value)}><option value="1">Every 1 minute</option><option value="2">Every 2 minutes</option><option value="5">Every 5 minutes</option><option value="15">Every 15 minutes</option></select></label><div className="settings-actions"><button className="button button-primary" disabled={saving}>{saving ? "Saving…" : monitor?.is_active ? "Update monitor" : "Start monitoring"}</button>{monitor?.is_active && <button className="button button-danger" type="button" onClick={stopMonitoring} disabled={saving}>Stop monitoring</button>}</div></form></div>
             </div>}
           </section>
