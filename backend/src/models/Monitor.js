@@ -17,11 +17,11 @@ const eventSchema = new mongoose.Schema(
 
 const monitorSchema = new mongoose.Schema(
     {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         address: { type: String, required: true, maxlength: 2048 },
         addressHash: {
             type: String,
             required: true,
-            unique: true,
             index: true,
         },
         host: { type: String, required: true },
@@ -43,5 +43,7 @@ const monitorSchema = new mongoose.Schema(
     },
     { timestamps: true },
 );
+
+monitorSchema.index({ userId: 1, addressHash: 1 }, { unique: true });
 
 export const Monitor = mongoose.model("Monitor", monitorSchema);
