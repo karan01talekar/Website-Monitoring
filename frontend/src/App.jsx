@@ -717,7 +717,7 @@ function Dashboard({ user, onSignOut }) {
           </span>
           <span>
             <strong>Website Monitoring</strong>
-            <small>ACMECORP · WORKSPACE</small>
+            <small>· WORKSPACE</small>
           </span>
           <button
             className="mobile-close"
