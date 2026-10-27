@@ -370,6 +370,47 @@ function AuthPage({ mode, onNavigate, onAuthenticated }) {
   );
 }
 
+function MonitorReport({ report, address, reportCards }) {
+  return (
+    <section className="surface monitor-report" aria-label="Website report">
+      <div className="monitor-report-heading">
+        <div>
+          <span className="eyebrow">LATEST WEBSITE REPORT</span>
+          <h2>{report.domain || address}</h2>
+        </div>
+        <span className={availabilityClass(report.uptime)}>
+          <i /> {availabilityLabel(report.uptime)}
+        </span>
+      </div>
+      <div className="report-grid">
+        {reportCards.map(({ name, icon: Icon, result, body }) => (
+          <article className="report-card" key={name}>
+            <div className="report-card-head">
+              <span className="report-icon">
+                <Icon />
+              </span>
+              <span
+                className={
+                  name === "Live availability"
+                    ? availabilityClass(result)
+                    : statusClass(result?.status || "unknown")
+                }
+              >
+                <i />{" "}
+                {name === "Live availability"
+                  ? availabilityLabel(result)
+                  : result?.status || "Unknown"}
+              </span>
+            </div>
+            <h4>{name}</h4>
+            <p>{body || "Information unavailable"}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Dashboard({ user, onSignOut }) {
   const [address, setAddress] = useState("");
   const [report, setReport] = useState(null);
@@ -465,6 +506,7 @@ function Dashboard({ user, onSignOut }) {
         return;
       }
       setAddress(value);
+      setReport(null);
       setLoading(true);
       setMessage("");
       setError(false);
@@ -486,6 +528,11 @@ function Dashboard({ user, onSignOut }) {
     },
     [address, getMonitor],
   );
+
+  function viewMonitorReport(target) {
+    selectPage("monitors");
+    check(target);
+  }
 
   useEffect(() => {
     loadMonitors();
@@ -568,6 +615,7 @@ function Dashboard({ user, onSignOut }) {
       await loadMonitors();
       const firstSuccess = results.find((item) => item.success);
       if (firstSuccess?.address) await check(firstSuccess.address);
+      selectPage("monitors");
       setMessage(
         failures.length
           ? `${added} monitor(s) started; ${failures.length} could not be added. ${failures[0]?.message || ""}`
@@ -664,14 +712,20 @@ function Dashboard({ user, onSignOut }) {
           <a
             className={`nav-item ${page === "overview" ? "active" : ""}`}
             href="#overview"
-            onClick={(event) => { event.preventDefault(); selectPage("overview"); }}
+            onClick={(event) => {
+              event.preventDefault();
+              selectPage("overview");
+            }}
           >
             <FiLayout /> Overview
           </a>
           <a
             className={`nav-item ${page === "monitors" ? "active" : ""}`}
             href="#monitors"
-            onClick={(event) => { event.preventDefault(); selectPage("monitors"); }}
+            onClick={(event) => {
+              event.preventDefault();
+              selectPage("monitors");
+            }}
           >
             <FiGlobe /> Monitors{" "}
             <span className="nav-count">{monitors.length}</span>
@@ -679,7 +733,10 @@ function Dashboard({ user, onSignOut }) {
           <a
             className={`nav-item ${page === "incidents" ? "active" : ""}`}
             href="#incidents"
-            onClick={(event) => { event.preventDefault(); selectPage("incidents"); }}
+            onClick={(event) => {
+              event.preventDefault();
+              selectPage("incidents");
+            }}
           >
             <FiAlertCircle /> Incidents{" "}
             {downCount > 0 && (
@@ -689,7 +746,10 @@ function Dashboard({ user, onSignOut }) {
           <a
             className={`nav-item ${page === "bulk" ? "active" : ""}`}
             href="#bulk-check"
-            onClick={(event) => { event.preventDefault(); selectPage("bulk"); }}
+            onClick={(event) => {
+              event.preventDefault();
+              selectPage("bulk");
+            }}
           >
             <FiShield /> Check multiple websites
           </a>
@@ -758,7 +818,14 @@ function Dashboard({ user, onSignOut }) {
                 Sign in
               </a>
             )}
-            <a className="button button-primary top-add" href="#monitors" onClick={(event) => { event.preventDefault(); selectPage("monitors"); }}>
+            <a
+              className="button button-primary top-add"
+              href="#monitors"
+              onClick={(event) => {
+                event.preventDefault();
+                selectPage("monitors");
+              }}
+            >
               <FiPlus /> Add monitor
             </a>
           </div>
@@ -778,7 +845,15 @@ function Dashboard({ user, onSignOut }) {
                   .toUpperCase()}
               </div>
               <h1>{pageTitles[page]}</h1>
-              <p>{page === "overview" ? "Here’s the health of your websites and services." : page === "monitors" ? "Manage and review all monitored websites." : page === "incidents" ? "Review websites that are currently unavailable." : "Run availability, SSL and domain checks for multiple websites."}</p>
+              <p>
+                {page === "overview"
+                  ? "Here’s the health of your websites and services."
+                  : page === "monitors"
+                    ? "Manage and review all monitored websites."
+                    : page === "incidents"
+                      ? "Review websites that are currently unavailable."
+                      : "Run availability, SSL and domain checks for multiple websites."}
+              </p>
             </div>
             <div className="last-updated">
               {lastUpdated
@@ -803,339 +878,499 @@ function Dashboard({ user, onSignOut }) {
             </div>
           )}
 
-          {page === "overview" && <section className="metric-grid" aria-label="Monitoring summary">
-            <article className="metric-card">
-              <div className="metric-top">
-                <span>Total monitors</span>
-                <span className="metric-icon blue">
-                  <FiGlobe />
-                </span>
-              </div>
-              <strong>{monitors.length}</strong>
-              <small>{activeCount} active monitors</small>
-            </article>
-            <article className="metric-card">
-              <div className="metric-top">
-                <span>Operational</span>
-                <span className="metric-icon green">
-                  <FiCheckCircle />
-                </span>
-              </div>
-              <strong>
-                {monitors.length ? `${operationalPercent}%` : "—"}
-              </strong>
-              <small>
-                {monitors.filter((item) => item.status === "up").length}{" "}
-                services available
-              </small>
-            </article>
-            <article className="metric-card">
-              <div className="metric-top">
-                <span>Needs attention</span>
-                <span className="metric-icon red">
-                  <FiAlertCircle />
-                </span>
-              </div>
-              <strong>{downCount}</strong>
-              <small>
-                {downCount ? "Down monitors" : "All systems operational"}
-              </small>
-            </article>
-            <article className="metric-card">
-              <div className="metric-top">
-                <span>Last refresh</span>
-                <span className="metric-icon violet">
-                  <FiRefreshCw />
-                </span>
-              </div>
-              <strong className="metric-date">
-                {lastUpdated
-                  ? lastUpdated.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "—"}
-              </strong>
-              <small>Monitor status updates automatically</small>
-            </article>
-          </section>}
-
-          {(page === "monitors" || page === "incidents") && <section className="content-grid single-page-grid">
-            {page === "monitors" && <>
-            <div className="monitor-summary surface">
-              <span className="summary-icon"><FiGlobe /></span>
-              <div><strong>{monitors.length} websites monitored</strong><small>Checks run automatically every 30 seconds</small></div>
-              <span className="summary-status"><i /> {activeCount} active</span>
-            </div>
-            <article className="surface monitor-surface" id="monitors">
-              <div className="surface-heading">
-                <div>
-                  <h2>Monitors</h2>
-                  <p>Current status of your websites and services</p>
-                </div>
-                <button
-                  className="button button-secondary"
-                  onClick={() => {
-                    setAddress("");
-                    setReport(null);
-                    setMonitor(null);
-                    selectPage("overview");
-                  }}
-                >
-                  <FiPlus /> Add monitor
-                </button>
-              </div>
-              {monitors.length ? (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>WEBSITE</th>
-                        <th>STATUS</th>
-                        <th>LAST CHECKED</th>
-                        <th>CHECK INTERVAL</th>
-                        <th>ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monitors.map((item) => (
-                        <tr key={item.address}>
-                          <td>
-                            <button
-                              className="site-cell"
-                              onClick={() => {
-                                setAddress(item.address);
-                                check(item.address);
-                              }}
-                            >
-                              <span className="site-icon">
-                                <FiGlobe />
-                              </span>
-                              <span>
-                                <strong>
-                                  {item.address.replace(/^https?:\/\//, "")}
-                                </strong>
-                                <small>{item.address}</small>
-                              </span>
-                            </button>
-                          </td>
-                          <td>
-                            <span
-                              className={statusClass(item.status || "unknown")}
-                            >
-                              <i />
-                              {item.status || "Pending"}
-                            </span>
-                          </td>
-                          <td>{relativeDate(item.last_checked_at)}</td>
-                          <td>
-                            {item.check_interval_minutes
-                              ? `Every ${item.check_interval_minutes} min`
-                              : "—"}
-                          </td>
-                          <td>
-                            <button
-                              className="table-action"
-                              onClick={() => {
-                                setAddress(item.address);
-                                check(item.address);
-                              }}
-                            >
-                              View report <FiArrowUpRight />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <span className="empty-icon">
+          {page === "overview" && (
+            <section className="metric-grid" aria-label="Monitoring summary">
+              <article className="metric-card">
+                <div className="metric-top">
+                  <span>Total monitors</span>
+                  <span className="metric-icon blue">
                     <FiGlobe />
                   </span>
-                  <strong>
-                    {lastUpdated ? "No monitors yet" : "Loading your monitors"}
-                  </strong>
-                  <p>
-                    {lastUpdated
-                      ? "Add a website to begin tracking availability and health."
-                      : "Connecting to the monitoring service…"}
-                  </p>
-                  <a className="button button-primary" href="#checks" onClick={(event) => { event.preventDefault(); selectPage("overview"); }}>
-                    <FiPlus /> Add your first monitor
-                  </a>
                 </div>
-              )}
-            </article>
-            </>}
+                <strong>{monitors.length}</strong>
+                <small>{activeCount} active monitors</small>
+              </article>
+              <article className="metric-card">
+                <div className="metric-top">
+                  <span>Operational</span>
+                  <span className="metric-icon green">
+                    <FiCheckCircle />
+                  </span>
+                </div>
+                <strong>
+                  {monitors.length ? `${operationalPercent}%` : "—"}
+                </strong>
+                <small>
+                  {monitors.filter((item) => item.status === "up").length}{" "}
+                  services available
+                </small>
+              </article>
+              <article className="metric-card">
+                <div className="metric-top">
+                  <span>Needs attention</span>
+                  <span className="metric-icon red">
+                    <FiAlertCircle />
+                  </span>
+                </div>
+                <strong>{downCount}</strong>
+                <small>
+                  {downCount ? "Down monitors" : "All systems operational"}
+                </small>
+              </article>
+              <article className="metric-card">
+                <div className="metric-top">
+                  <span>Last refresh</span>
+                  <span className="metric-icon violet">
+                    <FiRefreshCw />
+                  </span>
+                </div>
+                <strong className="metric-date">
+                  {lastUpdated
+                    ? lastUpdated.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—"}
+                </strong>
+                <small>Monitor status updates automatically</small>
+              </article>
+            </section>
+          )}
 
-            {page === "incidents" && <>
-            <div className={`incident-summary ${downCount ? "has-incidents" : "all-clear"}`}>
-              <span className="incident-summary-icon">{downCount ? <FiAlertCircle /> : <FiCheckCircle />}</span>
-              <div><strong>{downCount ? `${downCount} website${downCount === 1 ? "" : "s"} need attention` : "All monitored websites are operational"}</strong><small>{downCount ? "Review the active incidents below." : "We’ll show new incidents here as soon as a monitor reports a problem."}</small></div>
-              <span className="incident-summary-count">{downCount}</span>
-            </div>
-            <article className="surface incident-surface" id="incidents">
-              <div className="surface-heading">
-                <div>
-                  <h2>Incidents</h2>
-                  <p>Only websites currently reporting down</p>
-                </div>
-                <span
-                  className={
-                    downCount ? "health-live health-down-label" : "health-live"
-                  }
-                >
-                  <i /> {downCount} down
-                </span>
-              </div>
-              {downMonitors.length ? (
-                <div className="health-list">
-                  {downMonitors.map((item) => (
-                    <div className="health-row" key={item.address}>
-                      <span className="health-indicator health-down" />{" "}
-                      <span className="health-name">
-                        {item.address.replace(/^https?:\/\//, "")}
-                      </span>
-                      <span className={statusClass("down")}>Down</span>
+          {(page === "monitors" || page === "incidents") && (
+            <section className="content-grid single-page-grid">
+              {page === "monitors" && (
+                <>
+                  <div className="monitor-summary surface">
+                    <span className="summary-icon">
+                      <FiGlobe />
+                    </span>
+                    <div>
+                      <strong>{monitors.length} websites monitored</strong>
+                      <small>Checks run automatically every 30 seconds</small>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="health-empty">
-                  <FiCheckCircle />
-                  <span>
-                    {monitors.length
-                      ? "No active incidents. None of your websites are reporting down."
-                      : "Your incidents will appear here when you add monitors."}
-                  </span>
-                </div>
-              )}
-              <div className="health-footer">
-                <span>
-                  <span className="live-dot" /> Polling every 30 seconds
-                </span>
-                <span>{downCount} active</span>
-              </div>
-            </article>
-            </>}
-          </section>}
-
-          {page === "overview" && <section className="surface check-surface" id="checks">
-            <div className="surface-heading">
-              <div>
-                <h2>Check a website</h2>
-                <p>
-                  Run an on-demand availability, SSL and domain expiry check.
-                </p>
-              </div>
-              <span className="check-heading-icon">
-                <FiSearch />
-              </span>
-            </div>
-            <form
-              className="check-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                check();
-              }}
-            >
-              <label className="sr-only" htmlFor="website-address">
-                Website URL
-              </label>
-              <div className="url-input-wrap">
-                <FiGlobe />
-                <input
-                  id="website-address"
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  placeholder="https://example.com"
-                  type="url"
-                />
-              </div>
-              <button
-                className="button button-primary"
-                type="submit"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <FiRefreshCw className="spin" /> Checking…
-                  </>
-                ) : (
-                  <>
-                    <FiSearch /> Check website
-                  </>
-                )}
-              </button>
-            </form>
-            {report && (
-              <div className="report-area">
-                <div className="report-title">
-                  <div>
-                    <span className="eyebrow">LATEST CHECK</span>
-                    <h3>{report.domain || address}</h3>
+                    <span className="summary-status">
+                      <i /> {activeCount} active
+                    </span>
                   </div>
-                  <span className={availabilityClass(report.uptime)}>
-                    <i />
-                    {availabilityLabel(report.uptime)}
-                  </span>
-                </div>
-                <div className="report-grid">
-                  {reportCards.map(({ name, icon: Icon, result, body }) => (
-                    <article className="report-card" key={name}>
-                      <div className="report-card-head">
-                        <span className="report-icon">
-                          <Icon />
+                  <article className="surface monitor-surface" id="monitors">
+                    <div className="surface-heading">
+                      <div>
+                        <h2>Monitors</h2>
+                        <p>Current status of your websites and services</p>
+                      </div>
+                      <button
+                        className="button button-secondary"
+                        onClick={() => {
+                          setAddress("");
+                          setReport(null);
+                          setMonitor(null);
+                          selectPage("overview");
+                        }}
+                      >
+                        <FiPlus /> Add monitor
+                      </button>
+                    </div>
+                    {monitors.length ? (
+                      <div className="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>WEBSITE</th>
+                              <th>STATUS</th>
+                              <th>LAST CHECKED</th>
+                              <th>CHECK INTERVAL</th>
+                              <th>ACTION</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {monitors.map((item) => (
+                              <tr key={item.address}>
+                                <td>
+                                  <button
+                                    className="site-cell"
+                                    onClick={() => {
+                                      viewMonitorReport(item.address);
+                                    }}
+                                  >
+                                    <span className="site-icon">
+                                      <FiGlobe />
+                                    </span>
+                                    <span>
+                                      <strong>
+                                        {item.address.replace(
+                                          /^https?:\/\//,
+                                          "",
+                                        )}
+                                      </strong>
+                                      <small>{item.address}</small>
+                                    </span>
+                                  </button>
+                                </td>
+                                <td>
+                                  <span
+                                    className={statusClass(
+                                      item.status || "unknown",
+                                    )}
+                                  >
+                                    <i />
+                                    {item.status || "Pending"}
+                                  </span>
+                                </td>
+                                <td>{relativeDate(item.last_checked_at)}</td>
+                                <td>
+                                  {item.check_interval_minutes
+                                    ? `Every ${item.check_interval_minutes} min`
+                                    : "—"}
+                                </td>
+                                <td>
+                                  <button
+                                    className="table-action"
+                                    onClick={() => {
+                                      viewMonitorReport(item.address);
+                                    }}
+                                  >
+                                    View report <FiArrowUpRight />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <span className="empty-icon">
+                          <FiGlobe />
                         </span>
-                        <span
-                          className={
-                            name === "Live availability"
-                              ? availabilityClass(result)
-                              : statusClass(result?.status || "unknown")
-                          }
+                        <strong>
+                          {lastUpdated
+                            ? "No monitors yet"
+                            : "Loading your monitors"}
+                        </strong>
+                        <p>
+                          {lastUpdated
+                            ? "Add a website to begin tracking availability and health."
+                            : "Connecting to the monitoring service…"}
+                        </p>
+                        <a
+                          className="button button-primary"
+                          href="#checks"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            selectPage("overview");
+                          }}
                         >
-                          <i />
-                          {name === "Live availability"
-                            ? availabilityLabel(result)
-                            : result?.status || "Unknown"}
+                          <FiPlus /> Add your first monitor
+                        </a>
+                      </div>
+                    )}
+                  </article>
+                  {loading && address && (
+                    <div className="monitor-report-loading">
+                      <FiRefreshCw className="spin" /> Checking {address}…
+                    </div>
+                  )}
+                  {report && (
+                    <MonitorReport
+                      report={report}
+                      address={address}
+                      reportCards={reportCards}
+                    />
+                  )}
+                </>
+              )}
+
+              {page === "incidents" && (
+                <>
+                  <div
+                    className={`incident-summary ${downCount ? "has-incidents" : "all-clear"}`}
+                  >
+                    <span className="incident-summary-icon">
+                      {downCount ? <FiAlertCircle /> : <FiCheckCircle />}
+                    </span>
+                    <div>
+                      <strong>
+                        {downCount
+                          ? `${downCount} website${downCount === 1 ? "" : "s"} need attention`
+                          : "All monitored websites are operational"}
+                      </strong>
+                      <small>
+                        {downCount
+                          ? "Review the active incidents below."
+                          : "We’ll show new incidents here as soon as a monitor reports a problem."}
+                      </small>
+                    </div>
+                    <span className="incident-summary-count">{downCount}</span>
+                  </div>
+                  <article className="surface incident-surface" id="incidents">
+                    <div className="surface-heading">
+                      <div>
+                        <h2>Incidents</h2>
+                        <p>Only websites currently reporting down</p>
+                      </div>
+                      <span
+                        className={
+                          downCount
+                            ? "health-live health-down-label"
+                            : "health-live"
+                        }
+                      >
+                        <i /> {downCount} down
+                      </span>
+                    </div>
+                    {downMonitors.length ? (
+                      <div className="health-list">
+                        {downMonitors.map((item) => (
+                          <div className="health-row" key={item.address}>
+                            <span className="health-indicator health-down" />{" "}
+                            <span className="health-name">
+                              {item.address.replace(/^https?:\/\//, "")}
+                            </span>
+                            <span className={statusClass("down")}>Down</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="health-empty">
+                        <FiCheckCircle />
+                        <span>
+                          {monitors.length
+                            ? "No active incidents. None of your websites are reporting down."
+                            : "Your incidents will appear here when you add monitors."}
                         </span>
                       </div>
-                      <h4>{name}</h4>
-                      <p>{body || "Information unavailable"}</p>
-                    </article>
-                  ))}
-                </div>
-                <div className="monitor-settings">
-                  <div className="settings-heading">
-                    <div>
-                      <h3>Uptime monitoring</h3>
-                      <p>Get notified when this website becomes unavailable.</p>
-                    </div>
-                    {monitor?.is_active && (
-                      <span className="status-pill is-good">
-                        <i /> Monitoring active
-                      </span>
                     )}
+                    <div className="health-footer">
+                      <span>
+                        <span className="live-dot" /> Polling every 30 seconds
+                      </span>
+                      <span>{downCount} active</span>
+                    </div>
+                  </article>
+                </>
+              )}
+            </section>
+          )}
+
+          {page === "overview" && (
+            <section className="surface check-surface" id="checks">
+              <div className="surface-heading">
+                <div>
+                  <h2>Check a website</h2>
+                  <p>
+                    Run an on-demand availability, SSL and domain expiry check.
+                  </p>
+                </div>
+                <span className="check-heading-icon">
+                  <FiSearch />
+                </span>
+              </div>
+              <form
+                className="check-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  check();
+                }}
+              >
+                <label className="sr-only" htmlFor="website-address">
+                  Website URL
+                </label>
+                <div className="url-input-wrap">
+                  <FiGlobe />
+                  <input
+                    id="website-address"
+                    value={address}
+                    onChange={(event) => setAddress(event.target.value)}
+                    placeholder="https://example.com"
+                    type="url"
+                  />
+                </div>
+                <button
+                  className="button button-primary"
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <FiRefreshCw className="spin" /> Checking…
+                    </>
+                  ) : (
+                    <>
+                      <FiSearch /> Check website
+                    </>
+                  )}
+                </button>
+              </form>
+              {report && (
+                <div className="report-area">
+                  <div className="report-title">
+                    <div>
+                      <span className="eyebrow">LATEST CHECK</span>
+                      <h3>{report.domain || address}</h3>
+                    </div>
+                    <span className={availabilityClass(report.uptime)}>
+                      <i />
+                      {availabilityLabel(report.uptime)}
+                    </span>
                   </div>
-                  <form className="settings-form" onSubmit={startMonitoring}>
+                  <div className="report-grid">
+                    {reportCards.map(({ name, icon: Icon, result, body }) => (
+                      <article className="report-card" key={name}>
+                        <div className="report-card-head">
+                          <span className="report-icon">
+                            <Icon />
+                          </span>
+                          <span
+                            className={
+                              name === "Live availability"
+                                ? availabilityClass(result)
+                                : statusClass(result?.status || "unknown")
+                            }
+                          >
+                            <i />
+                            {name === "Live availability"
+                              ? availabilityLabel(result)
+                              : result?.status || "Unknown"}
+                          </span>
+                        </div>
+                        <h4>{name}</h4>
+                        <p>{body || "Information unavailable"}</p>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="monitor-settings">
+                    <div className="settings-heading">
+                      <div>
+                        <h3>Uptime monitoring</h3>
+                        <p>
+                          Get notified when this website becomes unavailable.
+                        </p>
+                      </div>
+                      {monitor?.is_active && (
+                        <span className="status-pill is-good">
+                          <i /> Monitoring active
+                        </span>
+                      )}
+                    </div>
+                    <form className="settings-form" onSubmit={startMonitoring}>
+                      <label>
+                        Alert email
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(event) => setEmail(event.target.value)}
+                          placeholder="alerts@example.com"
+                        />
+                      </label>
+                      <label>
+                        Check interval
+                        <select
+                          value={interval}
+                          onChange={(event) =>
+                            setIntervalValue(event.target.value)
+                          }
+                        >
+                          <option value="1">Every 1 minute</option>
+                          <option value="2">Every 2 minutes</option>
+                          <option value="5">Every 5 minutes</option>
+                          <option value="15">Every 15 minutes</option>
+                        </select>
+                      </label>
+                      <div className="settings-actions">
+                        <button
+                          className="button button-primary"
+                          disabled={saving}
+                        >
+                          {saving
+                            ? "Saving…"
+                            : monitor?.is_active
+                              ? "Update monitor"
+                              : "Start monitoring"}
+                        </button>
+                        {monitor?.is_active && (
+                          <button
+                            className="button button-danger"
+                            type="button"
+                            onClick={stopMonitoring}
+                            disabled={saving}
+                          >
+                            Stop monitoring
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {page === "bulk" && (
+            <section className="surface batch-surface" id="bulk-check">
+              <div className="bulk-intro">
+                <span className="bulk-intro-icon">
+                  <FiShield />
+                </span>
+                <div>
+                  <span className="eyebrow">BULK MONITORING</span>
+                  <h2>Check and monitor a list of websites</h2>
+                  <p>
+                    Paste one URL per line. We’ll add each site to your
+                    monitoring workspace.
+                  </p>
+                </div>
+              </div>
+              <button
+                className="batch-toggle"
+                onClick={() => setBatchOpen((value) => !value)}
+                aria-expanded={batchOpen}
+              >
+                <span className="batch-icon">
+                  <FiPlus />
+                </span>
+                <span>
+                  <strong>Monitor multiple websites</strong>
+                  <small>
+                    Add several URLs at once using the same alert settings.
+                  </small>
+                </span>
+                <FiChevronDown className={batchOpen ? "chevron-open" : ""} />
+              </button>
+              {batchOpen && (
+                <form className="batch-form" onSubmit={startBatchMonitoring}>
+                  <label>
+                    Website addresses
+                    <textarea
+                      rows="4"
+                      value={batchAddresses}
+                      onChange={(event) =>
+                        setBatchAddresses(event.target.value)
+                      }
+                      placeholder={
+                        "https://example.com\nhttps://api.example.com"
+                      }
+                      required
+                    />
+                  </label>
+                  <div className="batch-options">
                     <label>
                       Alert email
                       <input
                         type="email"
-                        required
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
+                        value={batchEmail}
+                        onChange={(event) => setBatchEmail(event.target.value)}
                         placeholder="alerts@example.com"
+                        required
                       />
                     </label>
                     <label>
                       Check interval
                       <select
-                        value={interval}
+                        value={batchInterval}
                         onChange={(event) =>
-                          setIntervalValue(event.target.value)
+                          setBatchInterval(event.target.value)
                         }
                       >
                         <option value="1">Every 1 minute</option>
@@ -1144,100 +1379,17 @@ function Dashboard({ user, onSignOut }) {
                         <option value="15">Every 15 minutes</option>
                       </select>
                     </label>
-                    <div className="settings-actions">
-                      <button
-                        className="button button-primary"
-                        disabled={saving}
-                      >
-                        {saving
-                          ? "Saving…"
-                          : monitor?.is_active
-                            ? "Update monitor"
-                            : "Start monitoring"}
-                      </button>
-                      {monitor?.is_active && (
-                        <button
-                          className="button button-danger"
-                          type="button"
-                          onClick={stopMonitoring}
-                          disabled={saving}
-                        >
-                          Stop monitoring
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </section>}
-
-          {page === "bulk" && <section className="surface batch-surface" id="bulk-check">
-            <div className="bulk-intro">
-              <span className="bulk-intro-icon"><FiShield /></span>
-              <div><span className="eyebrow">BULK MONITORING</span><h2>Check and monitor a list of websites</h2><p>Paste one URL per line. We’ll add each site to your monitoring workspace.</p></div>
-            </div>
-            <button
-              className="batch-toggle"
-              onClick={() => setBatchOpen((value) => !value)}
-              aria-expanded={batchOpen}
-            >
-              <span className="batch-icon">
-                <FiPlus />
-              </span>
-              <span>
-                <strong>Monitor multiple websites</strong>
-                <small>
-                  Add several URLs at once using the same alert settings.
-                </small>
-              </span>
-              <FiChevronDown className={batchOpen ? "chevron-open" : ""} />
-            </button>
-            {batchOpen && (
-              <form className="batch-form" onSubmit={startBatchMonitoring}>
-                <label>
-                  Website addresses
-                  <textarea
-                    rows="4"
-                    value={batchAddresses}
-                    onChange={(event) => setBatchAddresses(event.target.value)}
-                    placeholder={"https://example.com\nhttps://api.example.com"}
-                    required
-                  />
-                </label>
-                <div className="batch-options">
-                  <label>
-                    Alert email
-                    <input
-                      type="email"
-                      value={batchEmail}
-                      onChange={(event) => setBatchEmail(event.target.value)}
-                      placeholder="alerts@example.com"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Check interval
-                    <select
-                      value={batchInterval}
-                      onChange={(event) => setBatchInterval(event.target.value)}
-                    >
-                      <option value="1">Every 1 minute</option>
-                      <option value="2">Every 2 minutes</option>
-                      <option value="5">Every 5 minutes</option>
-                      <option value="15">Every 15 minutes</option>
-                    </select>
-                  </label>
-                </div>
-                <button
-                  className="button button-primary"
-                  disabled={batchSaving}
-                >
-                  {batchSaving ? "Adding monitors…" : "Start all monitors"}
-                </button>
-              </form>
-            )}
-          </section>}
+                  </div>
+                  <button
+                    className="button button-primary"
+                    disabled={batchSaving}
+                  >
+                    {batchSaving ? "Adding monitors…" : "Start all monitors"}
+                  </button>
+                </form>
+              )}
+            </section>
+          )}
 
           <footer className="page-footer">
             <span>

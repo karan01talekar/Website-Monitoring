@@ -162,6 +162,14 @@
 .page-view-bulk .batch-form { padding: 0 22px 22px; }
 .page-view-bulk .batch-form textarea { min-height: 140px; }
 .page-view-bulk .batch-form > .button { min-height: 42px; padding: 0 18px; }
+.monitor-report { grid-column: 1 / -1; padding: 18px; border-top: 3px solid #526bd4; }
+.monitor-report-loading { display: flex; grid-column: 1 / -1; align-items: center; gap: 9px; min-height: 72px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: white; color: #647187; font-size: 13px; overflow-wrap: anywhere; }
+.monitor-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.monitor-report-heading h2 { margin: 5px 0 0; font-family: 'Space Grotesk',sans-serif; font-size: 18px; overflow-wrap: anywhere; }
+.monitor-report .report-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+@media (max-width: 760px) {
+  .monitor-report .report-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 @media (max-width: 520px) {
   .topbar { min-width: 0; }
   .breadcrumb { flex: 1 1 auto; }
@@ -177,4 +185,7 @@
   .bulk-intro h2 { font-size: 17px; }
   .page-view-bulk .batch-toggle { padding: 14px; }
   .page-view-bulk .batch-form { padding: 0 14px 16px; }
+  .monitor-report { padding: 14px 12px; }
+  .monitor-report-heading { align-items: flex-start; flex-direction: column; }
+  .monitor-report .report-grid { grid-template-columns: minmax(0,1fr); }
 }
