@@ -16,3 +16,78 @@
 @media(max-width:760px){.page-heading h1{font-size:25px}.page-heading p{font-size:13px}.metric-card>small{font-size:11px}.surface-heading p{font-size:11px}.health-name{font-size:11px}.url-input-wrap input{font-size:12px}.top-signin{font-size:11px}}
 @media(max-width:440px){.page-heading h1{font-size:23px}.page-heading p{font-size:12px}.metric-top{font-size:11px}.metric-card>strong{font-size:25px}.metric-card>small{font-size:10px}.surface-heading h2{font-size:14px}.surface-heading p{font-size:10px}.auth-main{padding-right:18px;padding-left:18px}.auth-heading h2{font-size:26px}.auth-heading p{font-size:13px}.auth-form>label{font-size:12px}.auth-input input{font-size:13px}}
 .is-blocked{border-color:#f0dfb6;background:#fff9e9;color:#936710}
+
+/* Responsive layout refinements */
+@media (max-width: 960px) {
+  .content-grid { grid-template-columns: minmax(0, 1fr); }
+  .incident-surface { min-width: 0; }
+  .auth-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+  .auth-showcase { padding-right: clamp(24px, 4vw, 48px); padding-left: clamp(24px, 4vw, 48px); }
+}
+
+@media (max-width: 760px) {
+  .page-wrap, .main-content, .surface, .metric-card { min-width: 0; }
+  .page-heading { gap: 14px; }
+  .page-heading > div:first-child { min-width: 0; }
+  .last-updated { flex: 0 0 auto; }
+  .surface-heading { align-items: flex-start; }
+  .surface-heading > div { min-width: 0; }
+  .surface-heading > .button, .surface-heading > .health-live { flex: 0 0 auto; }
+  .check-form { min-width: 0; }
+  .url-input-wrap { min-width: 0; }
+  .report-area { min-width: 0; }
+  .settings-form { min-width: 0; }
+  .settings-form > label { min-width: 0; }
+  .settings-actions .button { min-height: 40px; }
+  .batch-toggle { min-width: 0; }
+  .batch-toggle > span:nth-child(2) { min-width: 0; }
+  .batch-options { min-width: 0; }
+  .page-footer { flex-wrap: wrap; }
+  .auth-layout { grid-template-columns: 1fr; }
+  .auth-showcase { display: none; }
+  .auth-main { min-height: 100svh; }
+}
+
+@media (max-width: 520px) {
+  .topbar { gap: 8px; padding-right: 12px; padding-left: 12px; }
+  .breadcrumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-actions { flex: 0 0 auto; }
+  .page-wrap { padding-top: 18px; }
+  .page-heading { align-items: flex-start; }
+  .page-heading p { max-width: 100%; }
+  .last-updated { max-width: 92px; }
+  .metric-grid { gap: 8px; }
+  .metric-card { padding: 12px; }
+  .metric-top { gap: 6px; }
+  .metric-card > strong.metric-date { overflow-wrap: anywhere; font-size: 20px; }
+  .surface-heading { gap: 8px; padding: 13px 12px; }
+  .surface-heading p { max-width: none; }
+  .surface-heading > .button { padding: 0 8px; font-size: 10px; }
+  .table-wrap th:first-child, .table-wrap td:first-child { padding-left: 12px; }
+  .table-wrap th:last-child, .table-wrap td:last-child { padding-right: 12px; }
+  .check-form { flex-direction: column; padding-right: 12px; padding-left: 12px; }
+  .check-form .button { min-height: 40px; }
+  .report-area { padding: 14px 12px; }
+  .report-title { align-items: flex-start; gap: 8px; }
+  .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-form { grid-template-columns: minmax(0, 1fr); }
+  .settings-actions { grid-column: auto; }
+  .settings-actions .button { flex: 1; }
+  .batch-form { padding-right: 12px; padding-left: 12px; }
+  .batch-options { grid-template-columns: minmax(0, 1fr); }
+  .auth-main { padding: 24px 18px; }
+  .auth-mobile-brand { margin-bottom: 34px; }
+  .auth-copyright { margin-top: 32px; }
+}
+
+@media (max-width: 360px) {
+  .topbar { padding-right: 8px; padding-left: 8px; }
+  .breadcrumb { font-size: 11px; }
+  .top-add { width: 32px; }
+  .page-wrap { padding-right: 10px; padding-left: 10px; }
+  .metric-card { padding: 10px; }
+  .metric-card > strong { font-size: 22px; }
+  .metric-card > strong.metric-date { font-size: 17px; }
+  .metric-icon { width: 23px; height: 23px; }
+  .report-grid { grid-template-columns: minmax(0, 1fr); }
+}
