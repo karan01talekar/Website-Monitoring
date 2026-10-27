@@ -117,3 +117,13 @@
   .settings-actions { width: 100%; }
   .settings-actions .button { min-width: 0; }
 }
+
+/* The navigation stays in the document flow and fits small screens. */
+.topbar { position: static; }
+@media (max-width: 520px) {
+  .topbar { min-width: 0; }
+  .breadcrumb { flex: 1 1 auto; }
+  .top-actions { min-width: 0; gap: 6px; }
+  .top-add { flex: 0 0 34px; width: 34px; min-width: 34px; padding: 0; overflow: hidden; font-size: 0; }
+  .top-add svg { flex: none; font-size: 16px; }
+}
