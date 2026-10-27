@@ -12,13 +12,7 @@ export default function App() {
   const [report, setReport] = useState(null);
   const [monitor, setMonitor] = useState(null);
   const [monitors, setMonitors] = useState([]);
-  const [searchedAddresses, setSearchedAddresses] = useState(() => {
-    try {
-      return JSON.parse(window.localStorage.getItem("website-monitoring-addresses") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  const [searchedAddresses, setSearchedAddresses] = useState([]);
   const [batchAddresses, setBatchAddresses] = useState("");
   const [batchEmail, setBatchEmail] = useState("");
   const [batchInterval, setBatchInterval] = useState(1);
@@ -81,7 +75,6 @@ export default function App() {
         searched.add(target.trim());
         const nextSearchedAddresses = [...searched];
         setSearchedAddresses(nextSearchedAddresses);
-        window.localStorage.setItem("website-monitoring-addresses", JSON.stringify(nextSearchedAddresses));
         setReport(data);
         await getMonitor(target);
       } catch (error) {
@@ -151,7 +144,6 @@ export default function App() {
       data.results.filter((result) => result.success).forEach((result) => searched.add(result.address));
       const nextSearchedAddresses = [...searched];
       setSearchedAddresses(nextSearchedAddresses);
-      window.localStorage.setItem("website-monitoring-addresses", JSON.stringify(nextSearchedAddresses));
       const firstAddedAddress = data.results.find((result) => result.success)?.address;
       if (firstAddedAddress) {
         setAddress(firstAddedAddress);
