@@ -163,6 +163,7 @@
 .page-view-bulk .batch-form textarea { min-height: 140px; }
 .page-view-bulk .batch-form > .button { min-height: 42px; padding: 0 18px; }
 .monitor-report { grid-column: 1 / -1; padding: 18px; border-top: 3px solid #526bd4; }
+.report-scroll-target { grid-column: 1 / -1; scroll-margin-top: 16px; }
 .monitor-report-loading { display: flex; grid-column: 1 / -1; align-items: center; gap: 9px; min-height: 72px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: white; color: #647187; font-size: 13px; overflow-wrap: anywhere; }
 .monitor-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .monitor-report-heading h2 { margin: 5px 0 0; font-family: 'Space Grotesk',sans-serif; font-size: 18px; overflow-wrap: anywhere; }
