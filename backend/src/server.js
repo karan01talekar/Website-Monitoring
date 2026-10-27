@@ -118,6 +118,7 @@ app.get(
         address: monitor.address,
         status: monitor.currentStatus,
         last_checked_at: monitor.lastCheckedAt,
+        check_interval_minutes: monitor.checkIntervalMinutes,
       })),
     );
   }),

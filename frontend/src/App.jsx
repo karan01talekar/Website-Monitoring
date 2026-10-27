@@ -417,6 +417,7 @@ function Dashboard({ user, onSignOut }) {
   const [monitor, setMonitor] = useState(null);
   const [monitors, setMonitors] = useState([]);
   const [batchAddresses, setBatchAddresses] = useState("");
+  const [bulkMonitorAddresses, setBulkMonitorAddresses] = useState([]);
   const [batchEmail, setBatchEmail] = useState(user?.email || "");
   const [batchInterval, setBatchInterval] = useState(1);
   const [email, setEmail] = useState(user?.email || "");
@@ -429,6 +430,7 @@ function Dashboard({ user, onSignOut }) {
   const [batchOpen, setBatchOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [page, setPage] = useState("overview");
+  const [monitorPage, setMonitorPage] = useState(1);
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const pageTitles = {
@@ -612,10 +614,15 @@ function Dashboard({ user, onSignOut }) {
       const results = data.results || [];
       const failures = results.filter((item) => !item.success);
       const added = results.length - failures.length;
+      const successfulAddresses = results
+        .filter((item) => item.success && item.address)
+        .map((item) => item.address);
+      setBulkMonitorAddresses((current) =>
+        [...new Set([...current, ...successfulAddresses])],
+      );
       await loadMonitors();
       const firstSuccess = results.find((item) => item.success);
       if (firstSuccess?.address) await check(firstSuccess.address);
-      selectPage("monitors");
       setMessage(
         failures.length
           ? `${added} monitor(s) started; ${failures.length} could not be added. ${failures[0]?.message || ""}`
@@ -642,6 +649,13 @@ function Dashboard({ user, onSignOut }) {
   ).length;
   const downMonitors = monitors.filter((item) => item.status === "down");
   const downCount = downMonitors.length;
+  const monitorPageSize = 8;
+  const monitorPageCount = Math.max(1, Math.ceil(monitors.length / monitorPageSize));
+  const currentMonitorPage = Math.min(monitorPage, monitorPageCount);
+  const visibleMonitors = monitors.slice(
+    (currentMonitorPage - 1) * monitorPageSize,
+    currentMonitorPage * monitorPageSize,
+  );
   const operationalPercent = monitors.length
     ? Math.round(
         (monitors.filter((item) => item.status === "up").length /
@@ -984,7 +998,7 @@ function Dashboard({ user, onSignOut }) {
                             </tr>
                           </thead>
                           <tbody>
-                            {monitors.map((item) => (
+                      {visibleMonitors.map((item) => (
                               <tr key={item.address}>
                                 <td>
                                   <button
@@ -1065,6 +1079,16 @@ function Dashboard({ user, onSignOut }) {
                         </a>
                       </div>
                     )}
+              {monitors.length > 0 && (
+                <div className="table-pagination">
+                  <span>Showing {(currentMonitorPage - 1) * monitorPageSize + 1}–{Math.min(currentMonitorPage * monitorPageSize, monitors.length)} of {monitors.length}</span>
+                  <div>
+                    <button className="button button-secondary" type="button" onClick={() => setMonitorPage((value) => Math.max(1, value - 1))} disabled={currentMonitorPage === 1}>Previous</button>
+                    <span>Page {currentMonitorPage} of {monitorPageCount}</span>
+                    <button className="button button-secondary" type="button" onClick={() => setMonitorPage((value) => Math.min(monitorPageCount, value + 1))} disabled={currentMonitorPage === monitorPageCount}>Next</button>
+                  </div>
+                </div>
+              )}
                   </article>
                   {loading && address && (
                     <div className="monitor-report-loading">
@@ -1387,6 +1411,52 @@ function Dashboard({ user, onSignOut }) {
                     {batchSaving ? "Adding monitors…" : "Start all monitors"}
                   </button>
                 </form>
+              )}
+              {bulkMonitorAddresses.length > 0 && (
+                <div className="bulk-monitor-list">
+                  <div className="bulk-list-heading">
+                    <div>
+                      <span className="eyebrow">THIS WORKSPACE</span>
+                      <h3>Monitored websites</h3>
+                    </div>
+                    <span className="bulk-list-count">{bulkMonitorAddresses.length} sites</span>
+                  </div>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr><th>WEBSITE</th><th>STATUS</th><th>CHECK INTERVAL</th><th>ACTION</th></tr>
+                      </thead>
+                      <tbody>
+                        {bulkMonitorAddresses.map((monitorAddress) => {
+                          const item = monitors.find((monitorItem) => monitorItem.address === monitorAddress);
+                          return (
+                            <tr key={monitorAddress}>
+                              <td>
+                                <span className="site-cell bulk-site-cell">
+                                  <span className="site-icon"><FiGlobe /></span>
+                                  <span><strong>{monitorAddress.replace(/^https?:\/\//, "")}</strong><small>{monitorAddress}</small></span>
+                                </span>
+                              </td>
+                              <td><span className={statusClass(item?.status || "unknown")}><i />{item?.status || "Pending"}</span></td>
+                              <td>{item?.check_interval_minutes ? `Every ${item.check_interval_minutes} min` : "—"}</td>
+                              <td>
+                                <button className="table-action" type="button" onClick={() => check(monitorAddress)}>
+                                  View report <FiArrowUpRight />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {loading && bulkMonitorAddresses.includes(address) && (
+                    <div className="monitor-report-loading"><FiRefreshCw className="spin" /> Checking {address}…</div>
+                  )}
+                  {report && bulkMonitorAddresses.includes(address) && (
+                    <MonitorReport report={report} address={address} reportCards={reportCards} />
+                  )}
+                </div>
               )}
             </section>
           )}

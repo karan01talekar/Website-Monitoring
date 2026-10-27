@@ -167,6 +167,16 @@
 .monitor-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .monitor-report-heading h2 { margin: 5px 0 0; font-family: 'Space Grotesk',sans-serif; font-size: 18px; overflow-wrap: anywhere; }
 .monitor-report .report-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.table-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid #edf0f4; color: #818b9b; font-size: 11px; }
+.table-pagination > div { display: flex; align-items: center; gap: 10px; }
+.table-pagination .button { min-height: 32px; font-size: 11px; }
+.bulk-monitor-list { margin: 0 17px 18px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.bulk-list-heading { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #edf0f4; }
+.bulk-list-heading h3 { margin: 4px 0 0; font-family: 'Space Grotesk',sans-serif; font-size: 16px; }
+.bulk-list-count { border-radius: 20px; padding: 5px 9px; background: #f1edff; color: #765dc2; font-size: 11px; font-weight: 600; }
+.bulk-site-cell { padding: 0; cursor: default; }
+.bulk-monitor-list .table-wrap table { min-width: 590px; }
+.bulk-monitor-list .monitor-report { margin: 14px; }
 @media (max-width: 760px) {
   .monitor-report .report-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
@@ -188,4 +198,8 @@
   .monitor-report { padding: 14px 12px; }
   .monitor-report-heading { align-items: flex-start; flex-direction: column; }
   .monitor-report .report-grid { grid-template-columns: minmax(0,1fr); }
+  .table-pagination { align-items: flex-start; flex-direction: column; padding: 12px; }
+  .table-pagination > div { width: 100%; justify-content: space-between; }
+  .bulk-monitor-list { margin: 0 12px 14px; }
+  .bulk-monitor-list .table-wrap th:nth-child(4), .bulk-monitor-list .table-wrap td:nth-child(4), .table-wrap th:nth-child(4), .table-wrap td:nth-child(4) { display: table-cell !important; }
 }
