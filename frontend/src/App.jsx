@@ -416,7 +416,7 @@ function Dashboard({ user, onSignOut }) {
   const [report, setReport] = useState(null);
   const [monitor, setMonitor] = useState(null);
   const [monitors, setMonitors] = useState([]);
-  const [batchAddresses, setBatchAddresses] = useState("");
+  const [batchAddresses, setBatchAddresses] = useState([""]);
   const [bulkMonitorAddresses, setBulkMonitorAddresses] = useState([]);
   const [batchEmail, setBatchEmail] = useState(user?.email || "");
   const [batchInterval, setBatchInterval] = useState(1);
@@ -605,7 +605,6 @@ function Dashboard({ user, onSignOut }) {
   async function startBatchMonitoring(event) {
     event.preventDefault();
     const addresses = batchAddresses
-      .split(/\r?\n/)
       .map((item) => item.trim())
       .filter(Boolean);
     if (!addresses.length) {
@@ -641,7 +640,7 @@ function Dashboard({ user, onSignOut }) {
       );
       setError(Boolean(failures.length));
       if (!failures.length) {
-        setBatchAddresses("");
+        setBatchAddresses([""]);
         setBatchOpen(false);
       }
     } catch (requestError) {
@@ -1410,20 +1409,51 @@ function Dashboard({ user, onSignOut }) {
               </button>
               {batchOpen && (
                 <form className="batch-form" onSubmit={startBatchMonitoring}>
-                  <label>
-                    Website addresses
-                    <textarea
-                      rows="4"
-                      value={batchAddresses}
-                      onChange={(event) =>
-                        setBatchAddresses(event.target.value)
-                      }
-                      placeholder={
-                        "https://example.com\nhttps://api.example.com"
-                      }
-                      required
-                    />
-                  </label>
+                  <div className="batch-addresses">
+                    <span className="batch-addresses-label">Website addresses</span>
+                    {batchAddresses.map((batchAddress, index) => (
+                      <div className="batch-address-row" key={index}>
+                        <input
+                          type="url"
+                          value={batchAddress}
+                          onChange={(event) =>
+                            setBatchAddresses((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index ? event.target.value : item,
+                              ),
+                            )
+                          }
+                          placeholder="https://example.com"
+                          required
+                        />
+                        {index === batchAddresses.length - 1 ? (
+                          <button
+                            className="batch-address-add"
+                            type="button"
+                            aria-label="Add another website address"
+                            onClick={() =>
+                              setBatchAddresses((current) => [...current, ""])
+                            }
+                          >
+                            <FiPlus />
+                          </button>
+                        ) : (
+                          <button
+                            className="batch-address-remove"
+                            type="button"
+                            aria-label={`Remove website address ${index + 1}`}
+                            onClick={() =>
+                              setBatchAddresses((current) =>
+                                current.filter((_, itemIndex) => itemIndex !== index),
+                              )
+                            }
+                          >
+                            <FiX />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                   <div className="batch-options">
                     <label>
                       Alert email

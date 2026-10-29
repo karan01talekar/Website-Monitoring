@@ -160,7 +160,13 @@
 .bulk-intro p { margin: 5px 0 0; color: #818b9b; font-size: 12px; }
 .page-view-bulk .batch-toggle { padding: 16px 22px; }
 .page-view-bulk .batch-form { padding: 0 22px 22px; }
-.page-view-bulk .batch-form textarea { min-height: 140px; }
+.batch-addresses { display: grid; gap: 9px; }
+.batch-addresses-label { color: #354257; font-size: 13px; font-weight: 600; }
+.batch-address-row { display: flex; gap: 8px; }
+.batch-address-row input { min-width: 0; flex: 1; }
+.batch-address-row button { display: grid; width: 42px; flex: none; place-items: center; border: 1px solid #dce2ec; border-radius: 8px; background: white; color: #526bd4; font-size: 17px; }
+.batch-address-row button:hover { border-color: #8295ed; background: #f7f8ff; }
+.batch-address-row .batch-address-remove { color: #a83d3d; }
 .page-view-bulk .batch-form > .button { min-height: 42px; padding: 0 18px; }
 .monitor-report { grid-column: 1 / -1; padding: 18px; border-top: 3px solid #526bd4; }
 .report-scroll-target { grid-column: 1 / -1; scroll-margin-top: 16px; }
