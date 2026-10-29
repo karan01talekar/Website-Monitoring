@@ -2,9 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiActivity,
   FiAlertCircle,
-  FiArrowDownRight,
   FiArrowUpRight,
-  FiBell,
   FiCheckCircle,
   FiChevronDown,
   FiClock,
@@ -604,9 +602,7 @@ function Dashboard({ user, onSignOut }) {
 
   async function startBatchMonitoring(event) {
     event.preventDefault();
-    const addresses = batchAddresses
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const addresses = batchAddresses.map((item) => item.trim()).filter(Boolean);
     if (!addresses.length) {
       setMessage("Add at least one website address.");
       setError(true);
@@ -1410,7 +1406,9 @@ function Dashboard({ user, onSignOut }) {
               {batchOpen && (
                 <form className="batch-form" onSubmit={startBatchMonitoring}>
                   <div className="batch-addresses">
-                    <span className="batch-addresses-label">Website addresses</span>
+                    <span className="batch-addresses-label">
+                      Website addresses
+                    </span>
                     {batchAddresses.map((batchAddress, index) => (
                       <div className="batch-address-row" key={index}>
                         <input
@@ -1444,7 +1442,9 @@ function Dashboard({ user, onSignOut }) {
                             aria-label={`Remove website address ${index + 1}`}
                             onClick={() =>
                               setBatchAddresses((current) =>
-                                current.filter((_, itemIndex) => itemIndex !== index),
+                                current.filter(
+                                  (_, itemIndex) => itemIndex !== index,
+                                ),
                               )
                             }
                           >
