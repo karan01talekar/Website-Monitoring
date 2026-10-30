@@ -587,12 +587,12 @@ function Dashboard({ user, onSignOut }) {
       if (data.monitor?.status !== "down") {
         showToast("Website added. It is currently up, so no alert email was needed.");
       } else if (alert?.status === "accepted") {
-        showToast(`Website added. Resend accepted the downtime alert for ${email}. Check Resend's delivery status if it doesn't arrive.`);
+        showToast(`Website added. Gmail SMTP accepted the downtime alert for ${email}. Check spam if it doesn't arrive.`);
       } else if (alert?.status === "already_accepted") {
-        showToast("Website added. Resend had already accepted an alert for this outage.");
+        showToast("Website added. The SMTP server had already accepted an alert for this outage.");
       } else {
         showToast(
-          `Website added, but the downtime alert was not submitted${alert?.message ? `: ${alert.message}` : ". Check the backend Resend configuration."}`,
+          `Website added, but the downtime alert was not sent${alert?.message ? `: ${alert.message}` : ". Check the backend SMTP configuration."}`,
           true,
         );
       }
@@ -671,11 +671,11 @@ function Dashboard({ user, onSignOut }) {
         if (alertFailures.length) {
           const reason = alertFailures[0].alert_email?.message;
           showToast(
-            `${added} website(s) added, but ${alertFailures.length} downtime alert(s) were not submitted${reason ? `: ${reason}` : ". Check the backend Resend configuration."}`,
+            `${added} website(s) added, but ${alertFailures.length} downtime alert(s) were not sent${reason ? `: ${reason}` : ". Check the backend SMTP configuration."}`,
             true,
           );
         } else if (acceptedAlerts) {
-          showToast(`${added} website(s) added. Resend accepted ${acceptedAlerts} downtime alert(s). Check Resend's delivery status if they don't arrive.`);
+          showToast(`${added} website(s) added. Gmail SMTP accepted ${acceptedAlerts} downtime alert(s). Check spam if they don't arrive.`);
         } else {
           showToast(`${added} website(s) added. Alerts are submitted when a check detects downtime.`);
         }

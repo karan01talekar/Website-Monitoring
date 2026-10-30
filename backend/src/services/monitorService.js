@@ -1,37 +1,48 @@
+import nodemailer from "nodemailer";
 import { Monitor } from "../models/Monitor.js";
 import { checkAvailability } from "./websiteService.js";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const mailFrom = process.env.RESEND_FROM_EMAIL || process.env.MAIL_FROM_ADDRESS;
-const mailFromName = process.env.MAIL_FROM_NAME;
+const mailer = (process.env.MAIL_MAILER || "smtp").toLowerCase();
+const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
+const smtpPort = Number(process.env.SMTP_PORT || process.env.MAIL_PORT || 587);
+const smtpUser = process.env.SMTP_USER || process.env.MAIL_USERNAME;
+const smtpPass = process.env.SMTP_PASS || process.env.MAIL_PASSWORD;
+const encryption = (
+  process.env.SMTP_ENCRYPTION || process.env.MAIL_ENCRYPTION || ""
+).toLowerCase();
+const mailFrom =
+  process.env.MAIL_FROM || process.env.MAIL_FROM_ADDRESS || smtpUser;
+const rawMailFromName = process.env.MAIL_FROM_NAME;
+const mailFromName = rawMailFromName
+  ?.replace(/\$\{([^}]+)\}/g, (_, key) => process.env[key] || "")
+  .trim();
 const formattedMailFrom = mailFromName && mailFrom
-  ? `${mailFromName} <${mailFrom}>`
+  ? { name: mailFromName, address: mailFrom }
   : mailFrom;
+const transporter =
+  mailer === "smtp" && smtpHost && smtpUser && smtpPass
+    ? nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure:
+          process.env.SMTP_SECURE === "true" ||
+          encryption === "ssl" ||
+          smtpPort === 465,
+        requireTLS: encryption === "tls" && smtpPort !== 465,
+        auth: { user: smtpUser, pass: smtpPass },
+      })
+    : null;
 
-if (!resendApiKey) {
-  console.warn("Resend alert email is disabled: RESEND_API_KEY is missing.");
+if (!transporter) {
+  console.warn(
+    "SMTP alert email is disabled: set MAIL_MAILER=smtp and configure MAIL_HOST, MAIL_USERNAME, and MAIL_PASSWORD.",
+  );
 } else if (!mailFrom) {
-  console.warn("Resend alert email is disabled: RESEND_FROM_EMAIL is missing.");
+  console.warn("SMTP alert email is disabled: MAIL_FROM_ADDRESS is missing.");
 }
 
 async function sendAlertEmail({ to, subject, text }) {
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: formattedMailFrom, to: [to], subject, text }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(
-      result.message || `Resend returned HTTP ${response.status}`,
-    );
-    error.code = result.name || `RESEND_HTTP_${response.status}`;
-    throw error;
-  }
-  return result;
+  return transporter.sendMail({ from: formattedMailFrom, to, subject, text });
 }
 
 export async function runMonitorCheck(monitor) {
@@ -55,9 +66,9 @@ export async function runMonitorCheck(monitor) {
       : "not_needed",
   };
   if (needsDownAlert && monitor.notificationEmail) {
-    if (!resendApiKey || !formattedMailFrom) {
+    if (!transporter || !formattedMailFrom) {
       alertEmail = { status: "not_configured" };
-      console.error("Alert email skipped: Resend API key or sender address is missing.");
+      console.error("Alert email skipped: SMTP is not fully configured.");
     } else {
       try {
         const info = await sendAlertEmail({
@@ -67,14 +78,14 @@ export async function runMonitorCheck(monitor) {
         });
         monitor.downAlertSentAt = new Date();
         await monitor.save();
-        alertEmail = { status: "accepted", messageId: info.id };
-        console.info("Alert email accepted by Resend", {
+        alertEmail = { status: "accepted", messageId: info.messageId };
+        console.info("Alert email accepted by SMTP", {
           address: monitor.address,
-          messageId: info.id,
+          messageId: info.messageId,
         });
       } catch (error) {
         alertEmail = { status: "failed", message: error.message };
-        console.error("Alert email failed", error.code || "RESEND_ERROR", error.message);
+        console.error("Alert email failed", error.code || "SMTP_ERROR", error.message);
       }
     }
   } else if (needsDownAlert) {
