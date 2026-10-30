@@ -248,7 +248,9 @@ app.post(
         checkIntervalMinutes: Number(check_interval_minutes),
       });
     const { alertEmail } = await runMonitorCheck(monitor);
-    res.status(201).json({ ...monitorPayload(monitor), alert_email: alertEmail });
+    res
+      .status(201)
+      .json({ ...monitorPayload(monitor), alert_email: alertEmail });
   }),
 );
 app.post(
@@ -293,7 +295,11 @@ app.post(
               checkIntervalMinutes: Number(check_interval_minutes),
             });
           const { alertEmail } = await runMonitorCheck(monitor);
-          return { address: target.address, success: true, alert_email: alertEmail };
+          return {
+            address: target.address,
+            success: true,
+            alert_email: alertEmail,
+          };
         } catch (error) {
           return {
             address: rawAddress,
@@ -342,7 +348,7 @@ await Monitor.collection.createIndex(
   { userId: 1, addressHash: 1 },
   { unique: true },
 );
-cron.schedule("* * * * *", () =>
+cron.schedule("*/5 * * * *", () =>
   checkDueMonitors().catch((error) =>
     console.error("Scheduled monitor check failed", error),
   ),
