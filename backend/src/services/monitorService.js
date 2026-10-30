@@ -59,11 +59,9 @@ export async function runMonitorCheck(monitor) {
     monitor.lastDownDurationSeconds = duration; monitor.events[monitor.events.length - 1].downDurationSeconds = duration;
   }
   monitor.events = monitor.events.slice(-200); await monitor.save();
-  const needsDownAlert = result.status === "down" && !monitor.downAlertSentAt;
+  const needsDownAlert = result.status === "down";
   let alertEmail = {
-    status: result.status === "down"
-      ? monitor.downAlertSentAt ? "already_accepted" : "pending"
-      : "not_needed",
+    status: result.status === "down" ? "pending" : "not_needed",
   };
   if (needsDownAlert && monitor.notificationEmail) {
     if (!transporter || !formattedMailFrom) {
@@ -79,7 +77,7 @@ export async function runMonitorCheck(monitor) {
         monitor.downAlertSentAt = new Date();
         await monitor.save();
         alertEmail = { status: "accepted", messageId: info.messageId };
-        console.info("Alert email accepted by SMTP", {
+        console.info("Down check alert email accepted by SMTP", {
           address: monitor.address,
           messageId: info.messageId,
         });

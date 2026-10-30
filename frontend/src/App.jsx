@@ -587,9 +587,7 @@ function Dashboard({ user, onSignOut }) {
       if (data.monitor?.status !== "down") {
         showToast("Website added. It is currently up, so no alert email was needed.");
       } else if (alert?.status === "accepted") {
-        showToast(`Website added. Gmail SMTP accepted the downtime alert for ${email}. Check spam if it doesn't arrive.`);
-      } else if (alert?.status === "already_accepted") {
-        showToast("Website added. The SMTP server had already accepted an alert for this outage.");
+        showToast(`Website added. Gmail SMTP accepted the alert for this down check. Another alert will be sent on each down check.`);
       } else {
         showToast(
           `Website added, but the downtime alert was not sent${alert?.message ? `: ${alert.message}` : ". Check the backend SMTP configuration."}`,
@@ -675,7 +673,7 @@ function Dashboard({ user, onSignOut }) {
             true,
           );
         } else if (acceptedAlerts) {
-          showToast(`${added} website(s) added. Gmail SMTP accepted ${acceptedAlerts} downtime alert(s). Check spam if they don't arrive.`);
+          showToast(`${added} website(s) added. Gmail SMTP accepted alerts for ${acceptedAlerts} down check(s); another alert is sent on each down check.`);
         } else {
           showToast(`${added} website(s) added. Alerts are submitted when a check detects downtime.`);
         }
