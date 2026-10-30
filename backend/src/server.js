@@ -348,7 +348,7 @@ await Monitor.collection.createIndex(
   { userId: 1, addressHash: 1 },
   { unique: true },
 );
-cron.schedule("*/5 * * * *", () =>
+cron.schedule("* * * * *", () =>
   checkDueMonitors().catch((error) =>
     console.error("Scheduled monitor check failed", error),
   ),
