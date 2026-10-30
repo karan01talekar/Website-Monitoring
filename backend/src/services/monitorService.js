@@ -6,15 +6,31 @@ const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
 const smtpPort = Number(process.env.SMTP_PORT || process.env.MAIL_PORT || 587);
 const smtpUser = process.env.SMTP_USER || process.env.MAIL_USERNAME;
 const smtpPass = process.env.SMTP_PASS || process.env.MAIL_PASSWORD;
-const mailFrom = process.env.MAIL_FROM || process.env.MAIL_FROM_ADDRESS;
+const encryption = (
+  process.env.SMTP_ENCRYPTION || process.env.MAIL_ENCRYPTION || ""
+).toLowerCase();
+const mailFrom = process.env.MAIL_FROM || process.env.MAIL_FROM_ADDRESS || smtpUser;
+const mailFromName = process.env.MAIL_FROM_NAME;
+const formattedMailFrom = mailFromName && mailFrom
+  ? { name: mailFromName, address: mailFrom }
+  : mailFrom;
 const transporter = smtpHost
   ? nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
-      secure: process.env.SMTP_SECURE === "true" || smtpPort === 465,
+      secure:
+        process.env.SMTP_SECURE === "true" ||
+        encryption === "ssl" ||
+        smtpPort === 465,
       auth: smtpUser ? { user: smtpUser, pass: smtpPass } : undefined,
     })
   : null;
+
+if (!transporter) {
+  console.warn("SMTP alert email is disabled: SMTP_HOST or MAIL_HOST is missing.");
+} else if (!smtpUser || !smtpPass) {
+  console.warn("SMTP alert email may fail: SMTP credentials are incomplete.");
+}
 
 export async function runMonitorCheck(monitor) {
   const checkedAt = new Date(); const result = await checkAvailability(monitor.address);
@@ -30,8 +46,29 @@ export async function runMonitorCheck(monitor) {
     monitor.lastDownDurationSeconds = duration; monitor.events[monitor.events.length - 1].downDurationSeconds = duration;
   }
   monitor.events = monitor.events.slice(-200); await monitor.save();
-  if (newDowntime && monitor.notificationEmail && transporter) {
-    try { await transporter.sendMail({ from: mailFrom, to: monitor.notificationEmail, subject: `Website down alert: ${monitor.address}`, text: `The monitored website ${monitor.address} was detected as down at ${checkedAt.toISOString()}.\n\nDetails: ${result.message}` }); monitor.downAlertSentAt = new Date(); await monitor.save(); } catch (error) { console.error("Alert email failed", error.message); }
+  if (newDowntime && monitor.notificationEmail) {
+    if (!transporter) {
+      console.error("Alert email skipped: SMTP is not configured.");
+    } else {
+      try {
+        const info = await transporter.sendMail({
+          from: formattedMailFrom,
+          to: monitor.notificationEmail,
+          subject: `Website down alert: ${monitor.address}`,
+          text: `The monitored website ${monitor.address} was detected as down at ${checkedAt.toISOString()}.\n\nDetails: ${result.message}`,
+        });
+        monitor.downAlertSentAt = new Date();
+        await monitor.save();
+        console.info("Alert email accepted by SMTP", {
+          address: monitor.address,
+          messageId: info.messageId,
+          accepted: info.accepted,
+          rejected: info.rejected,
+        });
+      } catch (error) {
+        console.error("Alert email failed", error.code || "SMTP_ERROR", error.message);
+      }
+    }
   }
   return monitor;
 }
