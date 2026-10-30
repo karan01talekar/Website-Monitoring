@@ -425,6 +425,9 @@ function Dashboard({ user, onSignOut }) {
   const [batchSaving, setBatchSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
+  const [toast, setToast] = useState("");
+  const [toastError, setToastError] = useState(false);
+  const toastTimerRef = useRef(null);
   const [batchOpen, setBatchOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [page, setPage] = useState("overview");
@@ -432,6 +435,18 @@ function Dashboard({ user, onSignOut }) {
   const [shouldScrollToReport, setShouldScrollToReport] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const reportRef = useRef(null);
+
+  function showToast(text, isError = false) {
+    setToast(text);
+    setToastError(isError);
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToast(""), 4500);
+  }
+
+  useEffect(
+    () => () => window.clearTimeout(toastTimerRef.current),
+    [],
+  );
 
   const pageTitles = {
     overview: "Overview",
@@ -567,7 +582,20 @@ function Dashboard({ user, onSignOut }) {
       });
       setMonitor(data.monitor);
       await loadMonitors();
-      setMessage("Monitoring is active. The monitor list has been refreshed.");
+      setMessage("");
+      const alert = data.alert_email;
+      if (data.monitor?.status !== "down") {
+        showToast("Website added. It is currently up, so no alert email was needed.");
+      } else if (alert?.status === "accepted") {
+        showToast(`Website added. Resend accepted the downtime alert for ${email}. Check Resend's delivery status if it doesn't arrive.`);
+      } else if (alert?.status === "already_accepted") {
+        showToast("Website added. Resend had already accepted an alert for this outage.");
+      } else {
+        showToast(
+          `Website added, but the downtime alert was not submitted${alert?.message ? `: ${alert.message}` : ". Check the backend Resend configuration."}`,
+          true,
+        );
+      }
     } catch (requestError) {
       setMessage(
         requestError.response?.data?.message ||
@@ -629,10 +657,33 @@ function Dashboard({ user, onSignOut }) {
       await loadMonitors();
       const firstSuccess = results.find((item) => item.success);
       if (firstSuccess?.address) await check(firstSuccess.address);
+      const alertFailures = results.filter(
+        (item) =>
+          item.success &&
+          ["failed", "not_configured", "no_recipient"].includes(
+            item.alert_email?.status,
+          ),
+      );
+      const acceptedAlerts = results.filter(
+        (item) => item.alert_email?.status === "accepted",
+      ).length;
+      if (added > 0) {
+        if (alertFailures.length) {
+          const reason = alertFailures[0].alert_email?.message;
+          showToast(
+            `${added} website(s) added, but ${alertFailures.length} downtime alert(s) were not submitted${reason ? `: ${reason}` : ". Check the backend Resend configuration."}`,
+            true,
+          );
+        } else if (acceptedAlerts) {
+          showToast(`${added} website(s) added. Resend accepted ${acceptedAlerts} downtime alert(s). Check Resend's delivery status if they don't arrive.`);
+        } else {
+          showToast(`${added} website(s) added. Alerts are submitted when a check detects downtime.`);
+        }
+      }
       setMessage(
         failures.length
-          ? `${added} monitor(s) started; ${failures.length} could not be added. ${failures[0]?.message || ""}`
-          : `${added} monitor(s) started successfully.`,
+          ? `${failures.length} website(s) could not be added. ${failures[0]?.message || ""}`
+          : "",
       );
       setError(Boolean(failures.length));
       if (!failures.length) {
@@ -900,6 +951,22 @@ function Dashboard({ user, onSignOut }) {
               </button>
             </div>
           )}
+
+      {toast && (
+        <div className={`toast-message ${toastError ? "toast-error" : ""}`} role={toastError ? "alert" : "status"} aria-live="polite">
+          {toastError ? <FiAlertCircle /> : <FiCheckCircle />}
+          <span>{toast}</span>
+          <button
+            onClick={() => {
+              window.clearTimeout(toastTimerRef.current);
+              setToast("");
+            }}
+            aria-label="Dismiss notification"
+          >
+            <FiX />
+          </button>
+        </div>
+      )}
 
           {page === "overview" && (
             <section className="metric-grid" aria-label="Monitoring summary">

@@ -247,8 +247,8 @@ app.post(
         notificationEmail: notification_email,
         checkIntervalMinutes: Number(check_interval_minutes),
       });
-    await runMonitorCheck(monitor);
-    res.status(201).json(monitorPayload(monitor));
+    const { alertEmail } = await runMonitorCheck(monitor);
+    res.status(201).json({ ...monitorPayload(monitor), alert_email: alertEmail });
   }),
 );
 app.post(
@@ -292,8 +292,8 @@ app.post(
               notificationEmail: notification_email,
               checkIntervalMinutes: Number(check_interval_minutes),
             });
-          await runMonitorCheck(monitor);
-          return { address: target.address, success: true };
+          const { alertEmail } = await runMonitorCheck(monitor);
+          return { address: target.address, success: true, alert_email: alertEmail };
         } catch (error) {
           return {
             address: rawAddress,

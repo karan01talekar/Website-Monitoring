@@ -49,9 +49,15 @@ export async function runMonitorCheck(monitor) {
   }
   monitor.events = monitor.events.slice(-200); await monitor.save();
   const needsDownAlert = result.status === "down" && !monitor.downAlertSentAt;
+  let alertEmail = {
+    status: result.status === "down"
+      ? monitor.downAlertSentAt ? "already_accepted" : "pending"
+      : "not_needed",
+  };
   if (needsDownAlert && monitor.notificationEmail) {
     if (!resendApiKey || !formattedMailFrom) {
-      console.error("Alert email skipped: Resend is not configured.");
+      alertEmail = { status: "not_configured" };
+      console.error("Alert email skipped: Resend API key or sender address is missing.");
     } else {
       try {
         const info = await sendAlertEmail({
@@ -61,16 +67,20 @@ export async function runMonitorCheck(monitor) {
         });
         monitor.downAlertSentAt = new Date();
         await monitor.save();
+        alertEmail = { status: "accepted", messageId: info.id };
         console.info("Alert email accepted by Resend", {
           address: monitor.address,
           messageId: info.id,
         });
       } catch (error) {
+        alertEmail = { status: "failed", message: error.message };
         console.error("Alert email failed", error.code || "RESEND_ERROR", error.message);
       }
     }
+  } else if (needsDownAlert) {
+    alertEmail = { status: "no_recipient" };
   }
-  return monitor;
+  return { monitor, alertEmail };
 }
 
 export async function checkDueMonitors() {
