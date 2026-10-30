@@ -12,7 +12,6 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mongoose": "^8.9.5",
-    "node-cron": "^4.0.7",
-    "nodemailer": "^6.9.16"
+    "node-cron": "^4.0.7"
   }
 }

@@ -1,35 +1,37 @@
-import nodemailer from "nodemailer";
 import { Monitor } from "../models/Monitor.js";
 import { checkAvailability } from "./websiteService.js";
 
-const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
-const smtpPort = Number(process.env.SMTP_PORT || process.env.MAIL_PORT || 587);
-const smtpUser = process.env.SMTP_USER || process.env.MAIL_USERNAME;
-const smtpPass = process.env.SMTP_PASS || process.env.MAIL_PASSWORD;
-const encryption = (
-  process.env.SMTP_ENCRYPTION || process.env.MAIL_ENCRYPTION || ""
-).toLowerCase();
-const mailFrom = process.env.MAIL_FROM || process.env.MAIL_FROM_ADDRESS || smtpUser;
+const resendApiKey = process.env.RESEND_API_KEY;
+const mailFrom = process.env.RESEND_FROM_EMAIL || process.env.MAIL_FROM_ADDRESS;
 const mailFromName = process.env.MAIL_FROM_NAME;
 const formattedMailFrom = mailFromName && mailFrom
-  ? { name: mailFromName, address: mailFrom }
+  ? `${mailFromName} <${mailFrom}>`
   : mailFrom;
-const transporter = smtpHost
-  ? nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure:
-        process.env.SMTP_SECURE === "true" ||
-        encryption === "ssl" ||
-        smtpPort === 465,
-      auth: smtpUser ? { user: smtpUser, pass: smtpPass } : undefined,
-    })
-  : null;
 
-if (!transporter) {
-  console.warn("SMTP alert email is disabled: SMTP_HOST or MAIL_HOST is missing.");
-} else if (!smtpUser || !smtpPass) {
-  console.warn("SMTP alert email may fail: SMTP credentials are incomplete.");
+if (!resendApiKey) {
+  console.warn("Resend alert email is disabled: RESEND_API_KEY is missing.");
+} else if (!mailFrom) {
+  console.warn("Resend alert email is disabled: RESEND_FROM_EMAIL is missing.");
+}
+
+async function sendAlertEmail({ to, subject, text }) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: formattedMailFrom, to: [to], subject, text }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(
+      result.message || `Resend returned HTTP ${response.status}`,
+    );
+    error.code = result.name || `RESEND_HTTP_${response.status}`;
+    throw error;
+  }
+  return result;
 }
 
 export async function runMonitorCheck(monitor) {
@@ -46,27 +48,25 @@ export async function runMonitorCheck(monitor) {
     monitor.lastDownDurationSeconds = duration; monitor.events[monitor.events.length - 1].downDurationSeconds = duration;
   }
   monitor.events = monitor.events.slice(-200); await monitor.save();
-  if (newDowntime && monitor.notificationEmail) {
-    if (!transporter) {
-      console.error("Alert email skipped: SMTP is not configured.");
+  const needsDownAlert = result.status === "down" && !monitor.downAlertSentAt;
+  if (needsDownAlert && monitor.notificationEmail) {
+    if (!resendApiKey || !formattedMailFrom) {
+      console.error("Alert email skipped: Resend is not configured.");
     } else {
       try {
-        const info = await transporter.sendMail({
-          from: formattedMailFrom,
+        const info = await sendAlertEmail({
           to: monitor.notificationEmail,
           subject: `Website down alert: ${monitor.address}`,
           text: `The monitored website ${monitor.address} was detected as down at ${checkedAt.toISOString()}.\n\nDetails: ${result.message}`,
         });
         monitor.downAlertSentAt = new Date();
         await monitor.save();
-        console.info("Alert email accepted by SMTP", {
+        console.info("Alert email accepted by Resend", {
           address: monitor.address,
-          messageId: info.messageId,
-          accepted: info.accepted,
-          rejected: info.rejected,
+          messageId: info.id,
         });
       } catch (error) {
-        console.error("Alert email failed", error.code || "SMTP_ERROR", error.message);
+        console.error("Alert email failed", error.code || "RESEND_ERROR", error.message);
       }
     }
   }
