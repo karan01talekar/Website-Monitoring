@@ -69,7 +69,13 @@ const authenticate = (req, res, next) => {
     .catch(next);
 };
 
-app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/health", (_req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? "ok" : "starting",
+    database: databaseReady ? "connected" : "disconnected",
+  });
+});
 app.post(
   "/api/auth/register",
   route(async (req, res) => {
@@ -326,35 +332,43 @@ app.delete(
   }),
 );
 
-await mongoose.connect(
-  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/website_monitoring",
-  { autoIndex: false },
-);
-await User.collection.createIndex({ email: 1 }, { unique: true });
-const monitorIndexes = await Monitor.collection.indexes().catch((error) => {
-  if (error.code === 26) return [];
-  throw error;
-});
-const oldGlobalAddressIndex = monitorIndexes.find(
-  (index) =>
-    index.unique &&
-    Object.keys(index.key).length === 1 &&
-    index.key.addressHash === 1,
-);
-if (oldGlobalAddressIndex)
-  await Monitor.collection.dropIndex(oldGlobalAddressIndex.name);
-await Monitor.collection.createIndex({ addressHash: 1 });
-await Monitor.collection.createIndex(
-  { userId: 1, addressHash: 1 },
-  { unique: true },
-);
-cron.schedule("* * * * *", () =>
-  checkDueMonitors().catch((error) =>
-    console.error("Scheduled monitor check failed", error),
-  ),
-);
-app.listen(Number(process.env.PORT || 4000), () =>
+const port = Number(process.env.PORT || 4000);
+const server = app.listen(port, "0.0.0.0", () =>
   console.log(
-    `API listening on ${process.env.PORT || 4000}; allowed origins: ${allowedOrigins.join(", ") || "any"}`,
+    `API listening on ${port}; allowed origins: ${allowedOrigins.join(", ") || "any"}`,
   ),
 );
+
+try {
+  await mongoose.connect(
+    process.env.MONGO_URI || "mongodb://127.0.0.1:27017/website_monitoring",
+    { autoIndex: false, serverSelectionTimeoutMS: 10000 },
+  );
+  await User.collection.createIndex({ email: 1 }, { unique: true });
+  const monitorIndexes = await Monitor.collection.indexes().catch((error) => {
+    if (error.code === 26) return [];
+    throw error;
+  });
+  const oldGlobalAddressIndex = monitorIndexes.find(
+    (index) =>
+      index.unique &&
+      Object.keys(index.key).length === 1 &&
+      index.key.addressHash === 1,
+  );
+  if (oldGlobalAddressIndex)
+    await Monitor.collection.dropIndex(oldGlobalAddressIndex.name);
+  await Monitor.collection.createIndex({ addressHash: 1 });
+  await Monitor.collection.createIndex(
+    { userId: 1, addressHash: 1 },
+    { unique: true },
+  );
+  cron.schedule("* * * * *", () =>
+    checkDueMonitors().catch((error) =>
+      console.error("Scheduled monitor check failed", error),
+    ),
+  );
+  console.info("MongoDB connected; scheduled monitor checks enabled.");
+} catch (error) {
+  console.error("Backend startup failed while connecting to MongoDB:", error);
+  server.close(() => process.exit(1));
+}

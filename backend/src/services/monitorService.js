@@ -1,48 +1,39 @@
-import nodemailer from "nodemailer";
+import axios from "axios";
 import { Monitor } from "../models/Monitor.js";
 import { checkAvailability } from "./websiteService.js";
 
-const mailer = (process.env.MAIL_MAILER || "smtp").toLowerCase();
-const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
-const smtpPort = Number(process.env.SMTP_PORT || process.env.MAIL_PORT || 587);
-const smtpUser = process.env.SMTP_USER || process.env.MAIL_USERNAME;
-const smtpPass = process.env.SMTP_PASS || process.env.MAIL_PASSWORD;
-const encryption = (
-  process.env.SMTP_ENCRYPTION || process.env.MAIL_ENCRYPTION || ""
-).toLowerCase();
-const mailFrom =
-  process.env.MAIL_FROM || process.env.MAIL_FROM_ADDRESS || smtpUser;
+const mailer = (process.env.MAIL_MAILER || "brevo").toLowerCase();
+const brevoApiKey = process.env.BREVO_API_KEY;
+const mailFrom = process.env.MAIL_FROM_ADDRESS || process.env.MAIL_FROM;
 const rawMailFromName = process.env.MAIL_FROM_NAME;
-const mailFromName = rawMailFromName
-  ?.replace(/\$\{([^}]+)\}/g, (_, key) => process.env[key] || "")
-  .trim();
-const formattedMailFrom = mailFromName && mailFrom
-  ? { name: mailFromName, address: mailFrom }
-  : mailFrom;
-const transporter =
-  mailer === "smtp" && smtpHost && smtpUser && smtpPass
-    ? nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure:
-          process.env.SMTP_SECURE === "true" ||
-          encryption === "ssl" ||
-          smtpPort === 465,
-        requireTLS: encryption === "tls" && smtpPort !== 465,
-        auth: { user: smtpUser, pass: smtpPass },
-      })
-    : null;
+const mailFromName = rawMailFromName?.trim();
+const mailConfigured = mailer === "brevo" && brevoApiKey && mailFrom;
 
-if (!transporter) {
+if (!mailConfigured) {
   console.warn(
-    "SMTP alert email is disabled: set MAIL_MAILER=smtp and configure MAIL_HOST, MAIL_USERNAME, and MAIL_PASSWORD.",
+    "Alert email is disabled: configure MAIL_MAILER=brevo, BREVO_API_KEY, and MAIL_FROM_ADDRESS.",
   );
-} else if (!mailFrom) {
-  console.warn("SMTP alert email is disabled: MAIL_FROM_ADDRESS is missing.");
 }
 
 async function sendAlertEmail({ to, subject, text }) {
-  return transporter.sendMail({ from: formattedMailFrom, to, subject, text });
+  const { data } = await axios.post(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      sender: { email: mailFrom, ...(mailFromName ? { name: mailFromName } : {}) },
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+    },
+    {
+      timeout: 10000,
+      headers: {
+        "api-key": brevoApiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    },
+  );
+  return data;
 }
 
 export async function runMonitorCheck(monitor) {
@@ -64,9 +55,9 @@ export async function runMonitorCheck(monitor) {
     status: result.status === "down" ? "pending" : "not_needed",
   };
   if (needsDownAlert && monitor.notificationEmail) {
-    if (!transporter || !formattedMailFrom) {
+    if (!mailConfigured) {
       alertEmail = { status: "not_configured" };
-      console.error("Alert email skipped: SMTP is not fully configured.");
+      console.error("Alert email skipped: Brevo API configuration is incomplete.");
     } else {
       try {
         const info = await sendAlertEmail({
@@ -77,7 +68,7 @@ export async function runMonitorCheck(monitor) {
         monitor.downAlertSentAt = new Date();
         await monitor.save();
         alertEmail = { status: "accepted", messageId: info.messageId };
-        console.info("Down check alert email accepted by SMTP", {
+        console.info("Down check alert email accepted by Brevo", {
           address: monitor.address,
           messageId: info.messageId,
         });
